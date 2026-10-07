@@ -42,3 +42,36 @@ jobs:
           name: failure-screenshots
           path: screenshots/
           if-no-files-found: ignore
+
+  # Temporary: run the checkout and cart tests 10 times to confirm the dropped-input fallback holds
+  verify-fallback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run checkout and cart tests 10 times
+        env:
+          HEADLESS: "1"
+        run: |
+          failed_runs=0
+          fallbacks=0
+          for i in $(seq 1 10); do
+            out=$(pytest tests/ui/test_checkout.py pages/test_cart.py -q -p no:cacheprovider --tb=line \
+              -o log_cli=true --log-cli-level=WARNING 2>&1) || failed_runs=$((failed_runs + 1))
+            n=$(echo "$out" | grep -c "Chrome dropped" || true)
+            fallbacks=$((fallbacks + n))
+            echo "run $i: $(echo "$out" | tail -1) | fallbacks used: $n"
+            echo "$out" | grep "Chrome dropped\|Error\|FAILED" || true
+          done
+          echo "### $failed_runs/10 runs had failures; JavaScript fallback used $fallbacks times" >> "$GITHUB_STEP_SUMMARY"
+          [ "$failed_runs" -eq 0 ]
