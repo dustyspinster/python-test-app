@@ -1,4 +1,6 @@
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 
 class CartPage:
@@ -7,9 +9,11 @@ class CartPage:
 
     def __init__(self, driver):
         self.driver = driver
+        self.wait = WebDriverWait(driver, 10)
 
     def item_names(self):
+        self.wait.until(EC.presence_of_element_located(self.ITEM_NAMES))
         return [el.text for el in self.driver.find_elements(*self.ITEM_NAMES)]
 
     def checkout(self):
-        self.driver.find_element(*self.CHECKOUT_BUTTON).click()
+        self.wait.until(EC.element_to_be_clickable(self.CHECKOUT_BUTTON)).click()

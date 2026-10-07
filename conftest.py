@@ -2,6 +2,8 @@ import os
 
 import pytest
 from selenium import webdriver
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 from pages.login_page import LoginPage
 
@@ -28,4 +30,5 @@ def logged_in_driver(driver):
     page = LoginPage(driver)
     page.open()
     page.login("standard_user", "secret_sauce")
+    WebDriverWait(driver, 10).until(EC.url_contains("inventory"))
     return driver
