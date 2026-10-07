@@ -21,6 +21,7 @@ def pytest_runtest_makereport(item, call):
 @pytest.fixture
 def driver(request):
     options = webdriver.ChromeOptions()
+    options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
     headless = bool(os.getenv("HEADLESS"))
     if headless:
         options.add_argument("--headless=new")
@@ -44,6 +45,12 @@ def driver(request):
         (SCREENSHOT_DIR / f"{safe_name}.txt").write_text(
             f"URL: {driver.current_url}\nTitle: {driver.title}\n"
         )
+        try:
+            lines = [f"{e['level']}: {e['message']}" for e in driver.get_log("browser")]
+            (SCREENSHOT_DIR / f"{safe_name}.log").write_text("\n".join(lines) or "(no console messages)")
+        except Exception as exc:
+            (SCREENSHOT_DIR / f"{safe_name}.log").write_text(f"Could not read console log: {exc}")
+        (SCREENSHOT_DIR / f"{safe_name}.html").write_text(driver.page_source, encoding="utf-8")
     driver.quit()
 
 
