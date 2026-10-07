@@ -1,4 +1,5 @@
 from selenium.common.exceptions import (
+    ElementNotInteractableException,
     NoSuchElementException,
     StaleElementReferenceException,
     TimeoutException,
@@ -31,19 +32,32 @@ class CheckoutPage:
         wanted = (first, last, postal)
         locators = (self.FIRST_NAME, self.LAST_NAME, self.POSTAL_CODE)
 
-        # Type everything, then confirm the fields kept the text. Retry if the page wiped it.
-        for _ in range(3):
+        def type_and_verify(driver):
             try:
                 for locator, text in zip(locators, wanted):
-                    field = self.wait.until(EC.element_to_be_clickable(locator))
+                    field = driver.find_element(*locator)
                     field.clear()
                     field.send_keys(text)
-                if self._values() == wanted:
-                    break
-            except (StaleElementReferenceException, NoSuchElementException):
-                continue
-        else:
-            raise AssertionError("Checkout fields did not keep the typed values")
+                return self._values() == wanted
+            except (
+                StaleElementReferenceException,
+                NoSuchElementException,
+                ElementNotInteractableException,
+            ):
+                return False
+
+        # Retry once per second for up to 15 seconds, so a slow page has time to settle
+        try:
+            WebDriverWait(self.driver, 15, poll_frequency=1).until(type_and_verify)
+        except TimeoutException:
+            try:
+                seen = self._values()
+            except NoSuchElementException:
+                seen = "form fields not found"
+            raise AssertionError(
+                f"Checkout fields did not keep typed values. "
+                f"Wanted {wanted}, saw {seen}, URL {self.driver.current_url}"
+            )
 
         self._click_continue()
 
