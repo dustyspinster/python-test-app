@@ -19,9 +19,9 @@ class LoginPage:
         self.driver.get(self.URL)
 
     def login(self, username, password):
-        self.driver.find_element(*self.USERNAME).send_keys(username)
-        self.driver.find_element(*self.PASSWORD).send_keys(password)
-        self.driver.find_element(*self.LOGIN_BUTTON).click()
+        self.wait.until(EC.visibility_of_element_located(self.USERNAME)).send_keys(username)
+        self.wait.until(EC.visibility_of_element_located(self.PASSWORD)).send_keys(password)
+        self.wait.until(EC.element_to_be_clickable(self.LOGIN_BUTTON)).click()
 
     def error_message(self):
         return self.wait.until(EC.visibility_of_element_located(self.ERROR)).text

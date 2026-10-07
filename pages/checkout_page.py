@@ -17,10 +17,10 @@ class CheckoutPage:
         self.wait = WebDriverWait(driver, 10)
 
     def fill_information(self, first, last, postal):
-        self.driver.find_element(*self.FIRST_NAME).send_keys(first)
-        self.driver.find_element(*self.LAST_NAME).send_keys(last)
-        self.driver.find_element(*self.POSTAL_CODE).send_keys(postal)
-        self.driver.find_element(*self.CONTINUE_BUTTON).click()
+        self.wait.until(EC.visibility_of_element_located(self.FIRST_NAME)).send_keys(first)
+        self.wait.until(EC.visibility_of_element_located(self.LAST_NAME)).send_keys(last)
+        self.wait.until(EC.visibility_of_element_located(self.POSTAL_CODE)).send_keys(postal)
+        self.wait.until(EC.element_to_be_clickable(self.CONTINUE_BUTTON)).click()
 
     def finish(self):
         self.wait.until(EC.element_to_be_clickable(self.FINISH_BUTTON)).click()
