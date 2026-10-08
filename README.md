@@ -1,5 +1,7 @@
 # python-test-app
 
+[![Tests](https://github.com/dustyspinster/python-test-app/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/dustyspinster/python-test-app/actions/workflows/tests.yml)
+
 Automated UI and API tests written in Python with pytest:
 
 - **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, cart, and checkout.
@@ -7,7 +9,14 @@ Automated UI and API tests written in Python with pytest:
 
 Tests run on every push and pull request, nightly at 9:00 UTC, and on demand through GitHub Actions.
 
-**Case study:** [Tracking a CI-only test failure down to a Chrome bug](docs/chrome-dropped-input.md). How the checkout tests' failures in CI were traced, experiment by experiment, to headless Chrome dropping real input, then worked around and reported upstream.
+## What this demonstrates
+
+- **Page object model:** UI tests describe user actions, while locators and waits live in [`pages/`](pages/).
+- **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, update and delete, plus negative cases such as missing records, bad credentials and unauthorized changes.
+- **Reliable tests:** explicit waits instead of sleeps, and every click or keystroke is checked for its effect rather than assumed to work.
+- **Continuous integration:** GitHub Actions runs the suite headless on every push, pull request and night, and uploads an HTML test report.
+- **Debuggable failures:** each failed UI test saves a screenshot, the URL, the browser console log and the page source.
+- **Root cause analysis:** a CI-only failure was traced, experiment by experiment, to headless Chrome dropping real input, then worked around and [reported to Chromium](https://issues.chromium.org/issues/571158512). Read the [case study](docs/chrome-dropped-input.md).
 
 ## Project layout
 
