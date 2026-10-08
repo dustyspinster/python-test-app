@@ -1,6 +1,6 @@
 # Case study: tracking a CI-only test failure down to a Chrome bug
 
-The checkout tests in this repo passed on my machine and failed in GitHub Actions. This is how I narrowed that down, step by step, to a bug in headless Chrome: real clicks and keystrokes sometimes never reach the page. It covers the leads that turned out wrong, the evidence that settled it, the workaround, and the upstream bug report.
+The checkout tests in this repo passed on my machine and failed in GitHub Actions. This is how Claude and I narrowed that down, step by step, to a bug in headless Chrome: real clicks and keystrokes sometimes never reach the page. It covers the leads that turned out wrong, the evidence that settled it, the workaround, and the upstream bug report.
 
 **Outcome:** the root cause was isolated to Chrome, below both the test code and ChromeDriver. The tests got a targeted workaround that still uses real input first, and the bug was reported as [Chromium issue 571158512](https://issues.chromium.org/issues/571158512).
 
@@ -17,7 +17,7 @@ AssertionError: Checkout fields did not keep typed values.
 Wanted ('', 'User', '97201'), saw ('', '', ''), URL https://www.saucedemo.com/checkout-step-one.html
 ```
 
-The page objects already waited for each element to be clickable, checked that each action took effect, and retried. The Checkout click was retried three times; typing was retried once a second for 15 seconds. Nothing helped. Locally, the same tests passed.
+The page objects already waited for each element to be clickable, checked that each action took effect, and retried. The Checkout click was retried three times; typing was retried once a second for 15 seconds. Nothing helped. Locally, the same tests passed!
 
 ## Hypotheses that were ruled out
 
@@ -37,7 +37,7 @@ Two things became clear along the way. **The failure was not CI-only:** it repro
 
 ## The evidence
 
-To see what the page actually received, I wrote a probe test. It performs the same actions as the failing tests, and before each one installs capture-phase event listeners on `window`, the first place an event arrives. When an action has no effect, it records the page's state, then retries the same action two other ways:
+To see what the page actually received, I had Claude write a probe test. It performs the same actions as the failing tests, and before each one installs capture-phase event listeners on `window`, the first place an event arrives. When an action has no effect, it records the page's state, then retries the same action two other ways:
 
 - **Through the DevTools protocol** (`Input.dispatchMouseEvent`), which sends the click straight to Chrome and bypasses ChromeDriver's click handling
 - **Through JavaScript** (`element.click()`), which triggers the click from inside the page with no real input involved
@@ -68,12 +68,12 @@ Real input is always tried first, so the tests still catch genuine problems such
 
 **Verification:**
 
-- **Simulated failure:** I made Selenium's native `click()`, `send_keys()` and `clear()` no-ops through a pytest plugin, so every action had to go through the fallback. All 13 UI tests passed.
+- **Simulated failure:** Claude made Selenium's native `click()`, `send_keys()` and `clear()` no-ops through a pytest plugin, so every action had to go through the fallback. All 13 UI tests passed.
 - **Normal runs:** the full suite passed locally, and the checkout and cart tests passed 30 of 30 times in CI. Chrome didn't drop input during those runs, so the fallback wasn't needed there; its log warning shows up in the test report when it fires.
 
 ## Reporting it upstream
 
-I searched the Chromium tracker for an existing report. The closest match, [issue 499572770](https://issues.chromium.org/issues/499572770), is about WebDriver input commands being slow but succeeding, so it's a different bug. I filed [issue 571158512](https://issues.chromium.org/issues/571158512) with the evidence and a standalone reproduction script. The script starts fresh headless sessions against the public demo site, and when input is lost it prints the evidence and confirms the DevTools and JavaScript results.
+I searched the Chromium tracker for an existing report. I found a couple and had Claude compare them to our current issue. The closest match, [issue 499572770](https://issues.chromium.org/issues/499572770), is about WebDriver input commands being slow but succeeding, so it's a different bug. I filed [issue 571158512](https://issues.chromium.org/issues/571158512) with the evidence and a standalone reproduction script. The script starts fresh headless sessions against the public demo site, and when input is lost it prints the evidence and confirms the DevTools and JavaScript results.
 
 ## Lessons
 
@@ -82,3 +82,4 @@ I searched the Chromium tracker for an existing report. The closest match, [issu
 - **"Fails only in CI" can be a sampling artifact.** The bug also happened locally, in bursts. The extra probe runs exposed that.
 - **Change one variable at a time.** Comparing scenarios and Chrome versions side by side in the same CI run ruled out explanations quickly.
 - **Keep workarounds narrow and visible.** The fallback runs only after real input demonstrably failed, and logs every time it does.
+- **Push past the quick fix.** After the first attempt to resolve the issue failed, Claude suggested removing the tests from CI to make the build green. I wanted to know why they failed, and pressing for explanations at each step led to the probe experiments and real cause. Skipping the tests would have hidden a bug that also affected local runs. 
