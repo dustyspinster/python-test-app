@@ -14,7 +14,7 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 - **Page object model:** UI tests describe user actions, while locators and waits live in [`pages/`](pages/).
 - **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, update and delete, plus negative cases such as missing records, bad credentials and unauthorized changes.
 - **Reliable tests:** explicit waits instead of sleeps, and every click or keystroke is checked for its effect rather than assumed to work.
-- **Continuous integration:** GitHub Actions runs the suite headless on every push, pull request and night, and uploads an HTML test report.
+- **Continuous integration:** GitHub Actions runs linting, API tests and headless UI tests as separate parallel jobs on every push, pull request and night, and uploads an HTML report for each test job.
 - **Code quality:** type-hinted page objects, with linting and formatting enforced by [ruff](https://docs.astral.sh/ruff/) in CI.
 - **Debuggable failures:** each failed UI test saves a screenshot, the URL, the browser console log and the page source.
 - **Root cause analysis:** a CI-only failure was traced, experiment by experiment, to headless Chrome dropping real input, then worked around and [reported to Chromium](https://issues.chromium.org/issues/571158512). Read the [case study](docs/chrome-dropped-input.md).
@@ -28,7 +28,7 @@ tests/ui/              UI tests: login, cart, checkout
 tests/api/             API tests for Restful-booker, with their own fixtures
 conftest.py            Chrome setup, a logged-in driver fixture, and failure capture
 pyproject.toml         ruff lint and format settings
-.github/workflows/     CI workflow: lint and tests
+.github/workflows/     CI workflow: lint, API tests and UI tests as separate jobs
 ```
 
 ## Running the tests
@@ -86,7 +86,7 @@ ruff format --check .
 | `.log` | Browser console messages |
 | `.html` | Page source |
 
-In CI, download these from the run's **failure-screenshots** artifact. The **test-report** artifact has the full HTML test report.
+In CI, download these from the run's **failure-screenshots** artifact. The **ui-test-report** and **api-test-report** artifacts have the full HTML report for each test job.
 
 ## Known issues
 
@@ -110,7 +110,7 @@ Real input is always tried first, so the tests still catch genuine problems such
 WARNING  pages.interactions:interactions.py:49 Chrome dropped the click on ('id', 'checkout'); clicking via JavaScript
 ```
 
-pytest only prints logs for failing tests by default. To see the warnings for passing tests too, check each test's captured log in the HTML test report, or run with live logging:
+pytest only prints logs for failing tests by default. To see the warnings for passing tests too, check each test's captured log in the UI test report, or run with live logging:
 
 ```
 pytest -v -o log_cli=true --log-cli-level=WARNING
