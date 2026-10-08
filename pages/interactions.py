@@ -5,6 +5,8 @@ click or keystroke is accepted by ChromeDriver but no event ever reaches the
 DOM, and it stays that way for the rest of the page. Triggering the same action
 from inside the page with JavaScript still works, so each helper tries real
 input first and falls back to JavaScript only when nothing happened.
+
+Reported upstream as https://issues.chromium.org/issues/571158512
 """
 import logging
 
