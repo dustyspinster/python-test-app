@@ -2,9 +2,7 @@ import requests
 
 
 def test_create_booking(base_url, booking_payload, json_headers):
-    response = requests.post(
-        f"{base_url}/booking", json=booking_payload, headers=json_headers, timeout=15
-    )
+    response = requests.post(f"{base_url}/booking", json=booking_payload, headers=json_headers, timeout=15)
     body = response.json()
 
     assert response.status_code == 200

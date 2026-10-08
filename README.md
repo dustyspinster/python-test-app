@@ -15,6 +15,7 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 - **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, update and delete, plus negative cases such as missing records, bad credentials and unauthorized changes.
 - **Reliable tests:** explicit waits instead of sleeps, and every click or keystroke is checked for its effect rather than assumed to work.
 - **Continuous integration:** GitHub Actions runs the suite headless on every push, pull request and night, and uploads an HTML test report.
+- **Code quality:** type-hinted page objects, with linting and formatting enforced by [ruff](https://docs.astral.sh/ruff/) in CI.
 - **Debuggable failures:** each failed UI test saves a screenshot, the URL, the browser console log and the page source.
 - **Root cause analysis:** a CI-only failure was traced, experiment by experiment, to headless Chrome dropping real input, then worked around and [reported to Chromium](https://issues.chromium.org/issues/571158512). Read the [case study](docs/chrome-dropped-input.md).
 
@@ -26,7 +27,8 @@ pages/                 Page objects for the Swag Labs UI
 tests/ui/              UI tests: login, cart, checkout
 tests/api/             API tests for Restful-booker, with their own fixtures
 conftest.py            Chrome setup, a logged-in driver fixture, and failure capture
-.github/workflows/     CI workflow
+pyproject.toml         ruff lint and format settings
+.github/workflows/     CI workflow: lint and tests
 ```
 
 ## Running the tests
@@ -61,6 +63,17 @@ $env:HEADLESS = "1"; pytest -v  # Windows PowerShell
 ```
 
 Dependency versions are pinned in `requirements.txt` so CI doesn't pick up new releases unannounced. To upgrade a package, change its version there and let CI confirm the suite still passes.
+
+## Linting and formatting
+
+CI runs [ruff](https://docs.astral.sh/ruff/) in a separate lint job alongside the tests, with the settings in `pyproject.toml`. To run the same checks locally:
+
+```
+ruff check .
+ruff format --check .
+```
+
+`ruff check --fix .` fixes what it can automatically, and `ruff format .` reformats the code.
 
 ## When a UI test fails
 

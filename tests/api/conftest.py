@@ -46,9 +46,7 @@ def booking_payload():
 
 @pytest.fixture
 def new_booking(base_url, booking_payload, json_headers, auth_headers):
-    response = requests.post(
-        f"{base_url}/booking", json=booking_payload, headers=json_headers, timeout=15
-    )
+    response = requests.post(f"{base_url}/booking", json=booking_payload, headers=json_headers, timeout=15)
     assert response.status_code == 200
     booking_id = response.json()["bookingid"]
     yield booking_id

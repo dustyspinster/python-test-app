@@ -8,13 +8,25 @@ input first and falls back to JavaScript only when nothing happened.
 
 Reported upstream as https://issues.chromium.org/issues/571158512
 """
-import logging
 
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+import logging
+from collections.abc import Callable
+
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    StaleElementReferenceException,
+    TimeoutException,
+)
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 log = logging.getLogger(__name__)
+
+# A Selenium locator such as (By.ID, "checkout")
+Locator = tuple[str, str]
+# Anything WebDriverWait can wait on: returns a truthy value once the condition holds
+Condition = Callable[[WebDriver], object]
 
 # React tracks input values itself, so set the value through the native setter
 # and fire an input event, or React keeps its old state
@@ -25,17 +37,19 @@ arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
 """
 
 
-def _happened(driver, done, timeout):
+def _happened(driver: WebDriver, done: Condition, timeout: float) -> bool:
     try:
         WebDriverWait(
             driver, timeout, ignored_exceptions=(NoSuchElementException, StaleElementReferenceException)
         ).until(done)
         return True
-    except Exception:
+    except TimeoutException:
         return False
 
 
-def click(driver, locator, done, timeout=10, settle=4):
+def click(
+    driver: WebDriver, locator: Locator, done: Condition, timeout: float = 10, settle: float = 4
+) -> None:
     """Click the element, then wait until done(driver) is truthy."""
     WebDriverWait(driver, timeout).until(EC.element_to_be_clickable(locator)).click()
     if _happened(driver, done, settle):
@@ -54,10 +68,10 @@ def click(driver, locator, done, timeout=10, settle=4):
         raise AssertionError(f"Clicking {locator} had no effect, even via JavaScript")
 
 
-def type_text(driver, locator, text, timeout=10, settle=2):
+def type_text(driver: WebDriver, locator: Locator, text: str, timeout: float = 10, settle: float = 2) -> None:
     """Replace the field's contents with text and confirm the field kept it."""
 
-    def has_text(d):
+    def has_text(d: WebDriver) -> bool:
         return d.find_element(*locator).get_attribute("value") == text
 
     field = WebDriverWait(driver, timeout).until(EC.element_to_be_clickable(locator))

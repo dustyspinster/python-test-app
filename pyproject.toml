@@ -1,0 +1,9 @@
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, import sorting, bugbear, pyupgrade, and type annotations
+select = ["E", "W", "F", "I", "B", "UP", "ANN"]
+# Tests and fixtures don't need return type annotations
+per-file-ignores = { "tests/**" = ["ANN"], "conftest.py" = ["ANN"] }
