@@ -3,6 +3,7 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from pages.cart_page import CartPage
 from pages.interactions import click
 
 
@@ -29,4 +30,5 @@ class InventoryPage:
         return int(badges[0].text) if badges else 0
 
     def open_cart(self) -> None:
-        click(self.driver, self.CART_LINK, EC.url_contains("cart.html"))
+        # Wait for the cart itself to render: the URL changes before the inventory page is replaced
+        click(self.driver, self.CART_LINK, EC.presence_of_element_located(CartPage.CART_LIST))
