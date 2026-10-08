@@ -88,3 +88,45 @@ jobs:
           name: failure-screenshots
           path: screenshots/
           if-no-files-found: ignore
+
+  # Publish the latest reports from main to GitHub Pages, whether the tests passed or failed
+  publish-reports:
+    needs: [api-tests, ui-tests]
+    if: always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Download test reports
+        uses: actions/download-artifact@v4
+        # A test job that failed before uploading leaves no report; publish what exists
+        continue-on-error: true
+        with:
+          pattern: "*-test-report"
+          path: site
+          merge-multiple: true
+
+      - name: Build index page
+        env:
+          UI_RESULT: ${{ needs.ui-tests.result }}
+          API_RESULT: ${{ needs.api-tests.result }}
+        run: python3 .github/scripts/build_report_index.py site
+
+      - name: Upload Pages content
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
