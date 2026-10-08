@@ -124,3 +124,17 @@ pytest -v -o log_cli=true --log-cli-level=WARNING
 A passing test with these warnings means the fallback handled a dropped input. If Chrome fixes the bug and the warnings stop appearing, the fallback can be removed.
 
 For the full investigation, see the [case study](docs/chrome-dropped-input.md).
+
+### Restful-booker resets every 10 minutes
+
+The public Restful-booker API [resets itself every 10 minutes](https://restful-booker.herokuapp.com/), which also invalidates login tokens. A test whose token was issued just before a reset gets `403 Forbidden` afterwards. Authorized requests in the API tests go through `AuthedClient` in [`tests/api/conftest.py`](tests/api/conftest.py), which logs in again and retries once on a 403, logging a warning:
+
+```
+PATCH https://restful-booker.herokuapp.com/booking/12 returned 403; logging in again and retrying once
+```
+
+A real permissions bug fails again on the retry, so it still fails the test. The tests that check unauthorized requests send no token and still expect 403.
+
+## License
+
+[MIT](LICENSE)
