@@ -5,14 +5,15 @@
 Automated UI and API tests written in Python with pytest:
 
 - **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, cart, and checkout.
-- **API tests** exercise the [Restful-booker](https://restful-booker.herokuapp.com) API with `requests`: authentication and booking create, read, update, and delete.
+- **API tests** exercise the [Restful-booker](https://restful-booker.herokuapp.com) API with `requests`: authentication, and creating, reading, searching, updating, partially updating and deleting bookings, with every JSON response validated against a schema.
 
 Tests run on every push and pull request, nightly at 9:00 UTC, and on demand through GitHub Actions.
 
 ## What this demonstrates
 
 - **Page object model:** UI tests describe user actions, while locators and waits live in [`pages/`](pages/).
-- **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, update and delete, plus negative cases such as missing records, bad credentials and unauthorized changes.
+- **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, search, update, partial update and delete, plus negative cases such as missing records, bad credentials and unauthorized changes.
+- **API contract checks:** strict [JSON schemas](tests/api/schemas.py) for every response shape, checking required fields, exact types, real dates and no unexpected fields, with offline tests proving the schemas reject bad data.
 - **Reliable tests:** explicit waits instead of sleeps, and every click or keystroke is checked for its effect rather than assumed to work.
 - **Continuous integration:** GitHub Actions runs linting, API tests and headless UI tests as separate parallel jobs on every push, pull request and night, and uploads an HTML report for each test job.
 - **Code quality:** type-hinted page objects, with linting and formatting enforced by [ruff](https://docs.astral.sh/ruff/) in CI.
@@ -26,6 +27,7 @@ pages/                 Page objects for the Swag Labs UI
   interactions.py      Click and type helpers that confirm each action took effect (see Known issues)
 tests/ui/              UI tests: login, cart, checkout
 tests/api/             API tests for Restful-booker, with their own fixtures
+  schemas.py           JSON schemas for each response shape, and the validation helper
 conftest.py            Chrome setup, a logged-in driver fixture, and failure capture
 pyproject.toml         ruff lint and format settings
 .github/workflows/     CI workflow: lint, API tests and UI tests as separate jobs
