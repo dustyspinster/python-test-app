@@ -2,6 +2,8 @@
 
 [![Tests](https://github.com/dustyspinster/python-test-app/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/dustyspinster/python-test-app/actions/workflows/tests.yml)
 
+**[View the latest test reports](https://dustyspinster.github.io/python-test-app/)** from `main`, published by CI after every push and nightly run.
+
 Automated UI and API tests written in Python with pytest:
 
 - **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, cart, and checkout.
@@ -15,7 +17,7 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 - **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, search, update, partial update and delete, plus negative cases such as missing records, bad credentials and unauthorized changes.
 - **API contract checks:** strict [JSON schemas](tests/api/schemas.py) for every response shape, checking required fields, exact types, real dates and no unexpected fields, with offline tests proving the schemas reject bad data.
 - **Reliable tests:** explicit waits instead of sleeps, and every click or keystroke is checked for its effect rather than assumed to work.
-- **Continuous integration:** GitHub Actions runs linting, API tests and headless UI tests as separate parallel jobs on every push, pull request and night, and uploads an HTML report for each test job.
+- **Continuous integration:** GitHub Actions runs linting, API tests and headless UI tests as separate parallel jobs on every push, pull request and night, uploads an HTML report for each test job, and publishes the reports from `main` to GitHub Pages.
 - **Code quality:** type-hinted page objects, with linting and formatting enforced by [ruff](https://docs.astral.sh/ruff/) in CI.
 - **Debuggable failures:** each failed UI test saves a screenshot, the URL, the browser console log and the page source.
 - **Root cause analysis:** a CI-only failure was traced, experiment by experiment, to headless Chrome dropping real input, then worked around and [reported to Chromium](https://issues.chromium.org/issues/571158512). Read the [case study](docs/chrome-dropped-input.md).
@@ -30,7 +32,8 @@ tests/api/             API tests for Restful-booker, with their own fixtures
   schemas.py           JSON schemas for each response shape, and the validation helper
 conftest.py            Chrome setup, a logged-in driver fixture, and failure capture
 pyproject.toml         ruff lint and format settings
-.github/workflows/     CI workflow: lint, API tests and UI tests as separate jobs
+.github/workflows/     CI workflow: lint, API tests, UI tests, and report publishing
+.github/scripts/       Builds the index page for the published reports
 ```
 
 ## Running the tests
@@ -88,7 +91,7 @@ ruff format --check .
 | `.log` | Browser console messages |
 | `.html` | Page source |
 
-In CI, download these from the run's **failure-screenshots** artifact. The **ui-test-report** and **api-test-report** artifacts have the full HTML report for each test job.
+In CI, download these from the run's **failure-screenshots** artifact. The **ui-test-report** and **api-test-report** artifacts have the full HTML report for each test job. For `main`, the same reports are also [published to GitHub Pages](https://dustyspinster.github.io/python-test-app/).
 
 ## Known issues
 
