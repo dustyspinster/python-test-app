@@ -124,3 +124,7 @@ pytest -v -o log_cli=true --log-cli-level=WARNING
 A passing test with these warnings means the fallback handled a dropped input. If Chrome fixes the bug and the warnings stop appearing, the fallback can be removed.
 
 For the full investigation, see the [case study](docs/chrome-dropped-input.md).
+
+## License
+
+[MIT](LICENSE)
