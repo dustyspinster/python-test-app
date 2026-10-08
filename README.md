@@ -7,6 +7,8 @@ Automated UI and API tests written in Python with pytest:
 
 Tests run on every push and pull request, nightly at 9:00 UTC, and on demand through GitHub Actions.
 
+**Case study:** [Tracking a CI-only test failure down to a Chrome bug](docs/chrome-dropped-input.md). How the checkout tests' failures in CI were traced, experiment by experiment, to headless Chrome dropping real input, then worked around and reported upstream.
+
 ## Project layout
 
 ```
@@ -93,3 +95,5 @@ pytest -v -o log_cli=true --log-cli-level=WARNING
 ```
 
 A passing test with these warnings means the fallback handled a dropped input. If Chrome fixes the bug and the warnings stop appearing, the fallback can be removed.
+
+For the full investigation, see the [case study](docs/chrome-dropped-input.md).
