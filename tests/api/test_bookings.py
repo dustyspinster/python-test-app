@@ -28,21 +28,17 @@ def test_get_booking(base_url, new_booking, booking_payload, json_headers):
     assert body == booking_payload
 
 
-def test_update_booking(base_url, new_booking, booking_payload, auth_headers):
+def test_update_booking(base_url, new_booking, booking_payload, authed):
     updated = {**booking_payload, "firstname": "Updated"}
-    response = requests.put(
-        f"{base_url}/booking/{new_booking}", json=updated, headers=auth_headers, timeout=15
-    )
+    response = authed.request("PUT", f"{base_url}/booking/{new_booking}", json=updated)
 
     assert response.status_code == 200
     assert_matches_schema(response.json(), BOOKING)
     assert response.json() == updated
 
 
-def test_partial_update_booking(base_url, new_booking, booking_payload, auth_headers):
-    response = requests.patch(
-        f"{base_url}/booking/{new_booking}", json={"firstname": "Patched"}, headers=auth_headers, timeout=15
-    )
+def test_partial_update_booking(base_url, new_booking, booking_payload, authed):
+    response = authed.request("PATCH", f"{base_url}/booking/{new_booking}", json={"firstname": "Patched"})
 
     assert response.status_code == 200
     assert_matches_schema(response.json(), BOOKING)
@@ -67,8 +63,8 @@ def test_search_bookings_by_name(base_url, new_booking, booking_payload, json_he
     assert {"bookingid": new_booking} in response.json()
 
 
-def test_delete_booking(base_url, new_booking, auth_headers, json_headers):
-    response = requests.delete(f"{base_url}/booking/{new_booking}", headers=auth_headers, timeout=15)
+def test_delete_booking(base_url, new_booking, authed, json_headers):
+    response = authed.request("DELETE", f"{base_url}/booking/{new_booking}")
     assert response.status_code == 201
 
     follow_up = requests.get(f"{base_url}/booking/{new_booking}", headers=json_headers, timeout=15)
@@ -113,3 +109,13 @@ def test_auth_with_bad_credentials_returns_no_token(base_url, json_headers):
     # This API returns 200 even for bad credentials, with a "reason" field instead of a token
     assert_matches_schema(response.json(), AUTH_FAILURE)
     assert response.json()["reason"] == "Bad credentials"
+
+
+def test_rejected_token_is_refreshed_once(base_url, new_booking, booking_payload, authed, caplog):
+    # Simulate a token wiped by Restful-booker's periodic reset
+    authed.token = "expired"
+    response = authed.request("PATCH", f"{base_url}/booking/{new_booking}", json={"firstname": "Retried"})
+
+    assert response.status_code == 200
+    assert response.json() == {**booking_payload, "firstname": "Retried"}
+    assert "returned 403; logging in again" in caplog.text
