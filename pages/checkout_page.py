@@ -14,6 +14,7 @@ class CheckoutPage:
     POSTAL_CODE = (By.ID, "postal-code")
     CONTINUE_BUTTON = (By.ID, "continue")
     FINISH_BUTTON = (By.ID, "finish")
+    CANCEL_BUTTON = (By.ID, "cancel")
     ERROR = (By.CSS_SELECTOR, "[data-test='error']")
     CONFIRMATION = (By.CLASS_NAME, "complete-header")
 
@@ -34,6 +35,10 @@ class CheckoutPage:
 
     def finish(self) -> None:
         click(self.driver, self.FINISH_BUTTON, EC.url_contains("checkout-complete"))
+
+    def cancel(self) -> None:
+        # Cancel on the order overview returns to the products page, keeping the cart
+        click(self.driver, self.CANCEL_BUTTON, EC.url_contains("inventory"))
 
     def error_message(self) -> str:
         return self.wait.until(EC.visibility_of_element_located(self.ERROR)).text

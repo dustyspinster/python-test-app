@@ -22,3 +22,11 @@ Feature: Checkout
       |       | User | 97201  | First Name is required  |
       | Test  |      | 97201  | Last Name is required   |
       | Test  | User |        | Postal Code is required |
+
+  Scenario: Cancelling checkout keeps the cart
+    When I open my cart
+    And I start checkout
+    And I enter first name "Test", last name "User" and postal code "97201"
+    And I cancel my order
+    Then I am taken back to the Products page
+    And my cart badge shows 1

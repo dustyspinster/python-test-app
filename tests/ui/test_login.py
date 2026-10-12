@@ -1,6 +1,4 @@
 from pytest_bdd import given, parsers, scenarios, then, when
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
 
 from pages.login_page import LoginPage
 
@@ -17,11 +15,6 @@ def login_page(driver):
 @when(parsers.re(r'I log in as "(?P<username>[^"]*)" with password "(?P<password>[^"]*)"'))
 def log_in(browser, username, password):
     LoginPage(browser).login(username, password)
-
-
-@then("I see the product inventory")
-def on_inventory(browser):
-    WebDriverWait(browser, 10).until(EC.url_contains("inventory"))
 
 
 @then(parsers.parse('I see the login error "{error}"'))

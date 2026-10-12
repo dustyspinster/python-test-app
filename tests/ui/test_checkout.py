@@ -28,6 +28,11 @@ def enter_details(browser, first, last, postal):
     CheckoutPage(browser).fill_information(first, last, postal)
 
 
+@when("I cancel my order")
+def cancel_order(browser):
+    CheckoutPage(browser).cancel()
+
+
 @when("I finish my order")
 def finish_order(browser):
     CheckoutPage(browser).finish()
