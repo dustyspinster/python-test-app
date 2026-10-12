@@ -1,36 +1,21 @@
+from pytest_bdd import parsers, scenarios, then, when
+
 from pages.cart_page import CartPage
-from pages.inventory_page import InventoryPage
+from pages.inventory_page import InventoryPage, product_id
 
-BACKPACK = "sauce-labs-backpack"
-BIKE_LIGHT = "sauce-labs-bike-light"
-
-
-def test_add_item_updates_cart_badge(logged_in_driver):
-    inventory = InventoryPage(logged_in_driver)
-    inventory.add_to_cart(BACKPACK)
-
-    assert inventory.cart_count() == 1
+scenarios("features/cart.feature")
 
 
-def test_add_two_items(logged_in_driver):
-    inventory = InventoryPage(logged_in_driver)
-    inventory.add_to_cart(BACKPACK)
-    inventory.add_to_cart(BIKE_LIGHT)
-
-    assert inventory.cart_count() == 2
+@when(parsers.parse('I remove "{product}" from my cart'))
+def remove_product(browser, product):
+    InventoryPage(browser).remove_from_cart(product_id(product))
 
 
-def test_remove_item_empties_cart(logged_in_driver):
-    inventory = InventoryPage(logged_in_driver)
-    inventory.add_to_cart(BACKPACK)
-    inventory.remove_from_cart(BACKPACK)
-
-    assert inventory.cart_count() == 0
+@then(parsers.parse("my cart badge shows {count:d}"))
+def cart_badge(browser, count):
+    assert InventoryPage(browser).cart_count() == count
 
 
-def test_cart_page_shows_added_item(logged_in_driver):
-    inventory = InventoryPage(logged_in_driver)
-    inventory.add_to_cart(BACKPACK)
-    inventory.open_cart()
-
-    assert "Sauce Labs Backpack" in CartPage(logged_in_driver).item_names()
+@then(parsers.parse('my cart lists "{product}"'))
+def cart_lists(browser, product):
+    assert product in CartPage(browser).item_names()

@@ -7,6 +7,11 @@ from pages.cart_page import CartPage
 from pages.interactions import click
 
 
+def product_id(name: str) -> str:
+    """Swag Labs builds its button IDs from the product name: "Sauce Labs Backpack" -> sauce-labs-backpack."""
+    return name.lower().replace(" ", "-")
+
+
 class InventoryPage:
     CART_BADGE = (By.CLASS_NAME, "shopping_cart_badge")
     CART_LINK = (By.CLASS_NAME, "shopping_cart_link")

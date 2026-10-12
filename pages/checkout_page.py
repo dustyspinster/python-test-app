@@ -7,6 +7,8 @@ from pages.interactions import click, type_text
 
 
 class CheckoutPage:
+    URL = "https://www.saucedemo.com/checkout-step-one.html"
+
     FIRST_NAME = (By.ID, "first-name")
     LAST_NAME = (By.ID, "last-name")
     POSTAL_CODE = (By.ID, "postal-code")
