@@ -4,16 +4,17 @@
 
 **[View the latest test reports](https://dustyspinster.github.io/python-test-app/)** from `main`, published by CI after every push and nightly run.
 
-Automated UI and API tests written in Python with pytest:
+Automated UI and API tests written in Python with pytest, with user-facing behavior described in Gherkin and run by [pytest-bdd](https://pytest-bdd.readthedocs.io/):
 
-- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, cart, and checkout.
+- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, cart, and checkout, all written as Gherkin scenarios.
 - **API tests** exercise the [Restful-booker](https://restful-booker.herokuapp.com) API with `requests`: authentication, and creating, reading, searching, updating, partially updating and deleting bookings, with every JSON response validated against a schema.
 
 Tests run on every push and pull request, nightly at 9:00 UTC, and on demand through GitHub Actions.
 
 ## What this demonstrates
 
-- **Page object model:** UI tests describe user actions, while locators and waits live in [`pages/`](pages/).
+- **Behavior-driven scenarios:** [feature files](tests/ui/features/) in Gherkin describe login, cart, checkout and the [booking lifecycle](tests/api/features/bookings.feature) in plain language a product owner can review, using Backgrounds, Scenario Outlines with Examples tables, and step definitions shared across features.
+- **Page object model:** step definitions describe user actions, while locators and waits live in [`pages/`](pages/).
 - **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, search, update, partial update and delete, plus negative cases such as missing records, bad credentials and unauthorized changes.
 - **API contract checks:** strict [JSON schemas](tests/api/schemas.py) for every response shape, checking required fields, exact types, real dates and no unexpected fields, with offline tests proving the schemas reject bad data.
 - **Reliable tests:** explicit waits instead of sleeps, and every click or keystroke is checked for its effect rather than assumed to work.
@@ -28,7 +29,12 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 pages/                 Page objects for the Swag Labs UI
   interactions.py      Click and type helpers that confirm each action took effect (see Known issues)
 tests/ui/              UI tests: login, cart, checkout
+  features/            Gherkin feature files, one per area
+  conftest.py          Step definitions shared by more than one feature
+  test_*.py            Each module runs one feature file and holds its own step definitions
 tests/api/             API tests for Restful-booker, with their own fixtures
+  features/            Gherkin scenarios for the booking lifecycle and its permissions
+  test_bookings.py     Plain pytest checks for listing, search, authentication and token retry
   schemas.py           JSON schemas for each response shape, and the validation helper
 conftest.py            Chrome setup, a logged-in driver fixture, and failure capture
 pyproject.toml         ruff lint and format settings
@@ -66,6 +72,16 @@ Chrome opens a visible window by default. Set `HEADLESS` to any value to run hea
 HEADLESS=1 pytest -v            # macOS / Linux
 $env:HEADLESS = "1"; pytest -v  # Windows PowerShell
 ```
+
+Each Gherkin scenario runs as an ordinary pytest test, named after the scenario, so the commands above run them too. To run one feature, run its module:
+
+```
+pytest tests/ui/test_checkout.py
+```
+
+### Writing scenarios
+
+Feature files describe what the user does and sees, not how the page is built: no locators, URLs or waits. Those belong in the step definitions and page objects. Each `test_*.py` module calls `scenarios()` on its feature file and defines the steps only that feature uses; steps used by several features, such as `Given I am logged in`, live in `conftest.py`. The API scenarios cover what a product owner cares about, who can create, change and cancel a booking, while plain pytest tests in `test_bookings.py` cover contract details such as search results and the authentication endpoint.
 
 Dependency versions are pinned in `requirements.txt` so CI doesn't pick up new releases unannounced. To upgrade a package, change its version there and let CI confirm the suite still passes.
 

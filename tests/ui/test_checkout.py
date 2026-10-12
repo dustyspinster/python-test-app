@@ -1,56 +1,43 @@
-import pytest
-from selenium.webdriver.support.ui import WebDriverWait
+from pytest_bdd import given, parsers, scenarios, then, when
 
 from pages.cart_page import CartPage
 from pages.checkout_page import CheckoutPage
-from pages.inventory_page import InventoryPage
 
-BACKPACK = "sauce-labs-backpack"
-CHECKOUT_URL = "https://www.saucedemo.com/checkout-step-one.html"
+scenarios("features/checkout.feature")
 
 
-def add_backpack(driver):
-    inventory = InventoryPage(driver)
-    inventory.add_to_cart(BACKPACK)
-    WebDriverWait(driver, 10).until(lambda d: inventory.cart_count() == 1)
-    return inventory
+@given("I am on the checkout information page")
+def checkout_information_page(browser):
+    # Open the form directly; the full click-through path is covered by the purchase scenario
+    browser.get(CheckoutPage.URL)
 
 
-@pytest.fixture
-def cart_with_item(logged_in_driver):
-    # Full click-through path, used by the end-to-end test
-    inventory = add_backpack(logged_in_driver)
-    inventory.open_cart()
-    CartPage(logged_in_driver).checkout()
-    return logged_in_driver
+@when("I start checkout")
+def start_checkout(browser):
+    CartPage(browser).checkout()
 
 
-@pytest.fixture
-def checkout_form(logged_in_driver):
-    # Opens the form directly, used by the validation tests
-    add_backpack(logged_in_driver)
-    logged_in_driver.get(CHECKOUT_URL)
-    return logged_in_driver
-
-
-def test_complete_checkout(cart_with_item):
-    checkout = CheckoutPage(cart_with_item)
-    checkout.fill_information("Test", "User", "97201")
-    checkout.finish()
-
-    assert "Thank you for your order" in checkout.confirmation_text()
-
-
-@pytest.mark.parametrize(
-    "first, last, postal, expected_error",
-    [
-        ("", "User", "97201", "First Name is required"),
-        ("Test", "", "97201", "Last Name is required"),
-        ("Test", "User", "", "Postal Code is required"),
-    ],
+# [^"]* rather than {}, so an Examples cell can be empty
+@when(
+    parsers.re(
+        r'I enter first name "(?P<first>[^"]*)", last name "(?P<last>[^"]*)"'
+        r' and postal code "(?P<postal>[^"]*)"'
+    )
 )
-def test_checkout_requires_all_fields(checkout_form, first, last, postal, expected_error):
-    checkout = CheckoutPage(checkout_form)
-    checkout.fill_information(first, last, postal)
+def enter_details(browser, first, last, postal):
+    CheckoutPage(browser).fill_information(first, last, postal)
 
-    assert expected_error in checkout.error_message()
+
+@when("I finish my order")
+def finish_order(browser):
+    CheckoutPage(browser).finish()
+
+
+@then(parsers.parse('I see the order confirmation "{text}"'))
+def order_confirmation(browser, text):
+    assert text in CheckoutPage(browser).confirmation_text()
+
+
+@then(parsers.parse('I see the checkout error "{error}"'))
+def checkout_error(browser, error):
+    assert error in CheckoutPage(browser).error_message()

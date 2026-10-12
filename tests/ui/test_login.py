@@ -1,32 +1,34 @@
-import pytest
+from pytest_bdd import given, parsers, scenarios, then, when
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from pages.login_page import LoginPage
 
-
-def test_valid_login(driver):
-    page = LoginPage(driver)
-    page.open()
-    page.login("standard_user", "secret_sauce")
-
-    WebDriverWait(driver, 10).until(EC.url_contains("inventory"))
-    assert "inventory" in driver.current_url
+scenarios("features/login.feature")
 
 
-@pytest.mark.parametrize(
-    "username, password, expected_error",
-    [
-        ("standard_user", "wrong_password", "do not match"),
-        ("locked_out_user", "secret_sauce", "locked out"),
-        ("", "secret_sauce", "Username is required"),
-        ("standard_user", "", "Password is required"),
-    ],
-)
-def test_invalid_login(driver, username, password, expected_error):
-    page = LoginPage(driver)
-    page.open()
-    page.login(username, password)
+@given("I am on the login page", target_fixture="browser")
+def login_page(driver):
+    LoginPage(driver).open()
+    return driver
 
-    assert expected_error in page.error_message()
-    assert "inventory" not in driver.current_url
+
+# [^"]* rather than {}, so an Examples cell can be empty
+@when(parsers.re(r'I log in as "(?P<username>[^"]*)" with password "(?P<password>[^"]*)"'))
+def log_in(browser, username, password):
+    LoginPage(browser).login(username, password)
+
+
+@then("I see the product inventory")
+def on_inventory(browser):
+    WebDriverWait(browser, 10).until(EC.url_contains("inventory"))
+
+
+@then(parsers.parse('I see the login error "{error}"'))
+def login_error(browser, error):
+    assert error in LoginPage(browser).error_message()
+
+
+@then("I am still on the login page")
+def still_on_login(browser):
+    assert "inventory" not in browser.current_url
