@@ -141,6 +141,14 @@ A passing test with these warnings means the fallback handled a dropped input. I
 
 For the full investigation, see the [case study](docs/chrome-dropped-input.md).
 
+### Swag Labs shows some item totals unrounded
+
+**Symptom.** The checkout scenario *Checkout totals the cart with tax* buys the Backpack, Bike Light, Bolt T-Shirt and Fleece Jacket. The order overview shows `Item total: $105.96000000000001` instead of `$105.96`. Tax ($8.48) and the order total ($114.44) are correct.
+
+**Cause.** Swag Labs adds prices as floating-point numbers, which can't store most cents exactly: in JavaScript, `29.99 + 9.99 + 15.99 + 49.99` is `105.96000000000001`. The site rounds the tax and total before displaying them but not the item total. Many carts happen to add up cleanly, which is why the two-item checks didn't catch it; this four-item cart doesn't.
+
+**How the suite handles it.** The scenario is tagged `@known-bug`, which [`tests/ui/conftest.py`](tests/ui/conftest.py) turns into a strict expected failure. It still runs on every build and appears in the report as expected to fail, without failing CI. Only a failed assertion counts as the known bug, so a timeout or crash still fails the test. If Swag Labs fixes the bug, the scenario passes unexpectedly, which fails the build as a reminder to remove the tag. The expected amounts are worked out by hand in the feature file rather than calculated by the test, so the test doesn't repeat the site's mistake.
+
 ### Restful-booker resets every 10 minutes
 
 The public Restful-booker API [resets itself every 10 minutes](https://restful-booker.herokuapp.com/), which also invalidates login tokens. A test whose token was issued just before a reset gets `403 Forbidden` afterwards. Authorized requests in the API tests go through `AuthedClient` in [`tests/api/conftest.py`](tests/api/conftest.py), which logs in again and retries once on a 403, logging a warning:

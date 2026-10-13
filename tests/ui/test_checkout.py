@@ -46,3 +46,18 @@ def order_confirmation(browser, text):
 @then(parsers.parse('I see the checkout error "{error}"'))
 def checkout_error(browser, error):
     assert error in CheckoutPage(browser).error_message()
+
+
+@then(parsers.parse('the item total is "{amount}"'))
+def item_total(browser, amount):
+    assert CheckoutPage(browser).item_total() == amount
+
+
+@then(parsers.parse('the tax is "{amount}"'))
+def tax(browser, amount):
+    assert CheckoutPage(browser).tax() == amount
+
+
+@then(parsers.parse('the order total is "{amount}"'))
+def order_total(browser, amount):
+    assert CheckoutPage(browser).total() == amount
