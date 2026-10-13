@@ -18,6 +18,7 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 - **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, search, update, partial update and delete, plus negative cases such as missing records, bad credentials and unauthorized changes.
 - **API contract checks:** strict [JSON schemas](tests/api/schemas.py) for every response shape, checking required fields, exact types, real dates and no unexpected fields, with offline tests proving the schemas reject bad data.
 - **Reliable tests:** explicit waits instead of sleeps, and every click or keystroke is checked for its effect rather than assumed to work.
+- **Parallel execution:** [pytest-xdist](https://pytest-xdist.readthedocs.io/) spreads each suite across one worker per CPU core, each UI worker with its own Chrome. Every test sets up its own browser session and data, so tests can run in any order on any worker. On a 4-core machine the UI suite drops from about 65 seconds to 19.
 - **Continuous integration:** GitHub Actions runs linting, API tests and headless UI tests as separate parallel jobs on every push, pull request and night, uploads an HTML report for each test job, and publishes the reports from `main` to GitHub Pages.
 - **Code quality:** type-hinted page objects, with linting and formatting enforced by [ruff](https://docs.astral.sh/ruff/) in CI.
 - **Debuggable failures:** each failed UI test saves a screenshot, the URL, the browser console log and the page source.
@@ -57,6 +58,12 @@ Run everything:
 
 ```
 pytest -v
+```
+
+Run in parallel, one worker per CPU core, as CI does:
+
+```
+pytest -n auto
 ```
 
 Run one part:
@@ -136,6 +143,8 @@ pytest only prints logs for failing tests by default. To see the warnings for pa
 ```
 pytest -v -o log_cli=true --log-cli-level=WARNING
 ```
+
+Live logging doesn't work with parallel workers (`-n`). For a parallel run, add `-rP` instead, which prints each passing test's captured log after the run.
 
 A passing test with these warnings means the fallback handled a dropped input. If Chrome fixes the bug and the warnings stop appearing, the fallback can be removed.
 

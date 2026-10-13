@@ -45,7 +45,8 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run API tests
-        run: pytest tests/api -v --html=api-report.html --self-contained-html
+        # -n auto runs one worker per CPU core
+        run: pytest tests/api -v -n auto --html=api-report.html --self-contained-html
 
       - name: Upload API test report
         if: always()
@@ -72,7 +73,8 @@ jobs:
       - name: Run UI tests
         env:
           HEADLESS: "1"
-        run: pytest tests/ui -v --html=ui-report.html --self-contained-html
+        # -n auto runs one worker per CPU core, each with its own Chrome
+        run: pytest tests/ui -v -n auto --html=ui-report.html --self-contained-html
 
       - name: Upload UI test report
         if: always()
