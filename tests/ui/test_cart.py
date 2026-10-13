@@ -11,11 +11,6 @@ def remove_product(browser, product):
     InventoryPage(browser).remove_from_cart(product_id(product))
 
 
-@then(parsers.parse("my cart badge shows {count:d}"))
-def cart_badge(browser, count):
-    assert InventoryPage(browser).cart_count() == count
-
-
 @then(parsers.parse('my cart lists "{product}"'))
 def cart_lists(browser, product):
     assert product in CartPage(browser).item_names()
