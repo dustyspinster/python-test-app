@@ -17,6 +17,10 @@ class CheckoutPage:
     CANCEL_BUTTON = (By.ID, "cancel")
     ERROR = (By.CSS_SELECTOR, "[data-test='error']")
     CONFIRMATION = (By.CLASS_NAME, "complete-header")
+    # The order overview's summary lines, such as "Item total: $39.98"
+    ITEM_TOTAL = (By.CSS_SELECTOR, "[data-test='subtotal-label']")
+    TAX = (By.CSS_SELECTOR, "[data-test='tax-label']")
+    TOTAL = (By.CSS_SELECTOR, "[data-test='total-label']")
 
     def __init__(self, driver: WebDriver) -> None:
         self.driver = driver
@@ -45,3 +49,16 @@ class CheckoutPage:
 
     def confirmation_text(self) -> str:
         return self.wait.until(EC.visibility_of_element_located(self.CONFIRMATION)).text
+
+    def _amount(self, locator: tuple[str, str]) -> str:
+        # "Item total: $39.98" -> "$39.98"
+        return self.wait.until(EC.visibility_of_element_located(locator)).text.rsplit(" ", 1)[-1]
+
+    def item_total(self) -> str:
+        return self._amount(self.ITEM_TOTAL)
+
+    def tax(self) -> str:
+        return self._amount(self.TAX)
+
+    def total(self) -> str:
+        return self._amount(self.TOTAL)
