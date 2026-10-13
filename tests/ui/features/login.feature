@@ -16,6 +16,10 @@ Feature: Login
     Examples:
       | username        | password       | error                |
       | standard_user   | wrong_password | do not match         |
-      | locked_out_user | secret_sauce   | locked out           |
       |                 | secret_sauce   | Username is required |
       | standard_user   |                | Password is required |
+
+  Scenario: A locked-out shopper can't log in, even with the right password
+    When I log in as "locked_out_user" with password "secret_sauce"
+    Then I see the login error "Epic sadface: Sorry, this user has been locked out."
+    And I am still on the login page
