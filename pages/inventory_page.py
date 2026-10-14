@@ -4,7 +4,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from pages.cart_page import CartPage
-from pages.interactions import click
+from pages.interactions import choose_option, click
 
 
 def product_id(name: str) -> str:
@@ -15,6 +15,9 @@ def product_id(name: str) -> str:
 class InventoryPage:
     CART_BADGE = (By.CLASS_NAME, "shopping_cart_badge")
     CART_LINK = (By.CLASS_NAME, "shopping_cart_link")
+    SORT_MENU = (By.CSS_SELECTOR, "[data-test='product-sort-container']")
+    ITEM_NAMES = (By.CSS_SELECTOR, "[data-test='inventory-item-name']")
+    ITEM_PRICES = (By.CSS_SELECTOR, "[data-test='inventory-item-price']")
 
     def __init__(self, driver: WebDriver) -> None:
         self.driver = driver
@@ -37,3 +40,14 @@ class InventoryPage:
     def open_cart(self) -> None:
         # Wait for the cart itself to render: the URL changes before the inventory page is replaced
         click(self.driver, self.CART_LINK, EC.presence_of_element_located(CartPage.CART_LIST))
+
+    def sort_by(self, option: str) -> None:
+        # option is the menu's visible text, such as "Price (low to high)"
+        choose_option(self.driver, self.SORT_MENU, option)
+
+    def product_names(self) -> list[str]:
+        return [el.text for el in self.driver.find_elements(*self.ITEM_NAMES)]
+
+    def product_prices(self) -> list[float]:
+        # "$29.99" -> 29.99
+        return [float(el.text.lstrip("$")) for el in self.driver.find_elements(*self.ITEM_PRICES)]
