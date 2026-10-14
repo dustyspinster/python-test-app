@@ -6,6 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from pages.inventory_page import InventoryPage, product_id
+from pages.login_page import LoginPage
 
 
 def pytest_bdd_apply_tag(tag, function):
@@ -25,6 +26,16 @@ def pytest_bdd_apply_tag(tag, function):
 @given("I am logged in", target_fixture="browser")
 def logged_in(logged_in_driver):
     return logged_in_driver
+
+
+@given(parsers.parse("I am logged in as {username}"), target_fixture="browser")
+def logged_in_as(driver, username):
+    # All Swag Labs test users share this password
+    page = LoginPage(driver)
+    page.open()
+    page.login(username, "secret_sauce")
+    WebDriverWait(driver, 10).until(EC.url_contains("inventory"))
+    return driver
 
 
 @given(parsers.parse('I have added "{product}" to my cart'))

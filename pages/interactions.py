@@ -19,7 +19,7 @@ from selenium.common.exceptions import (
 )
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import Select, WebDriverWait
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +34,16 @@ SET_VALUE_JS = """
 const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
 setter.call(arguments[0], arguments[1]);
 arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+"""
+
+# Same idea for a <select>: pick the option through the native setter, then
+# fire the change event React listens for
+SELECT_OPTION_JS = """
+const select = arguments[0];
+const option = Array.from(select.options).find((o) => o.text === arguments[1]);
+const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set;
+setter.call(select, option.value);
+select.dispatchEvent(new Event('change', { bubbles: true }));
 """
 
 
@@ -84,3 +94,22 @@ def type_text(driver: WebDriver, locator: Locator, text: str, timeout: float = 1
     driver.execute_script(SET_VALUE_JS, driver.find_element(*locator), text)
     if not _happened(driver, has_text, settle):
         raise AssertionError(f"Field {locator} did not keep {text!r}, even via JavaScript")
+
+
+def choose_option(
+    driver: WebDriver, locator: Locator, text: str, timeout: float = 10, settle: float = 2
+) -> None:
+    """Choose the option with this visible text in a dropdown, and confirm it was chosen."""
+
+    def chosen(d: WebDriver) -> bool:
+        return Select(d.find_element(*locator)).first_selected_option.text == text
+
+    menu = WebDriverWait(driver, timeout).until(EC.element_to_be_clickable(locator))
+    Select(menu).select_by_visible_text(text)
+    if _happened(driver, chosen, settle):
+        return
+
+    log.warning("Chrome dropped choosing %r in %s; choosing via JavaScript", text, locator)
+    driver.execute_script(SELECT_OPTION_JS, driver.find_element(*locator), text)
+    if not _happened(driver, chosen, settle):
+        raise AssertionError(f"Dropdown {locator} did not keep {text!r}, even via JavaScript")

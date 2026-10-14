@@ -6,14 +6,14 @@
 
 Automated UI and API tests written in Python with pytest, with user-facing behavior described in Gherkin and run by [pytest-bdd](https://pytest-bdd.readthedocs.io/):
 
-- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, cart, and checkout, all written as Gherkin scenarios.
+- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, product sorting, cart, and checkout, all written as Gherkin scenarios.
 - **API tests** exercise the [Restful-booker](https://restful-booker.herokuapp.com) API with `requests`: authentication, and creating, reading, searching, updating, partially updating and deleting bookings, with every JSON response validated against a schema.
 
 Tests run on every push and pull request, nightly at 9:00 UTC, and on demand through GitHub Actions.
 
 ## What this demonstrates
 
-- **Behavior-driven scenarios:** [feature files](tests/ui/features/) in Gherkin describe login, cart, checkout and the [booking lifecycle](tests/api/features/bookings.feature) in plain language a product owner can review, using Backgrounds, Scenario Outlines with Examples tables, and step definitions shared across features.
+- **Behavior-driven scenarios:** [feature files](tests/ui/features/) in Gherkin describe login, product sorting, cart, checkout and the [booking lifecycle](tests/api/features/bookings.feature) in plain language a product owner can review, using Backgrounds, Scenario Outlines with Examples tables, and step definitions shared across features.
 - **Page object model:** step definitions describe user actions, while locators and waits live in [`pages/`](pages/).
 - **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, search, update, partial update and delete, plus negative cases such as missing records, bad credentials and unauthorized changes.
 - **API contract checks:** strict [JSON schemas](tests/api/schemas.py) for every response shape, checking required fields, exact types, real dates and no unexpected fields, with offline tests proving the schemas reject bad data.
@@ -29,7 +29,7 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 ```
 pages/                 Page objects for the Swag Labs UI
   interactions.py      Click and type helpers that confirm each action took effect (see Known issues)
-tests/ui/              UI tests: login, cart, checkout
+tests/ui/              UI tests: login, product sorting, cart, checkout
   features/            Gherkin feature files, one per area
   conftest.py          Step definitions shared by more than one feature
   test_*.py            Each module runs one feature file and holds its own step definitions
@@ -124,13 +124,13 @@ In CI, download these from the run's **failure-screenshots** artifact. The **ui-
 
 **Cause.** We traced this to Chrome itself. When it happens, the page is healthy and ready for input: the element is visible and uncovered, the tab has focus, and the app's click handlers are attached. But no input event reaches the page at all. A click sent directly through Chrome's DevTools protocol, bypassing ChromeDriver, is lost the same way. A JavaScript `element.click()` on the same element works. We reproduced it on Chrome 153 and 154, on Linux in CI and on Windows. We reported it as [Chromium issue 571158512](https://issues.chromium.org/issues/571158512) in October 2026; it's not yet confirmed.
 
-**Workaround.** The page objects never call Selenium's `click()` or `send_keys()` directly. They go through `click()` and `type_text()` in [`pages/interactions.py`](pages/interactions.py), which:
+**Workaround.** The page objects never call Selenium's `click()`, `send_keys()` or `Select` directly. They go through `click()`, `type_text()` and `choose_option()` in [`pages/interactions.py`](pages/interactions.py), which:
 
 1. use real input first, as a user would
-2. confirm the action took effect: the page navigated, a button changed, the field kept its text, or an error appeared
+2. confirm the action took effect: the page navigated, a button changed, the field kept its text, the dropdown kept its choice, or an error appeared
 3. only if nothing happened, perform the same action with JavaScript and log a warning
 
-Real input is always tried first, so the tests still catch genuine problems such as hidden or covered elements. When adding a page object, use these helpers instead of calling `click()` or `send_keys()` directly.
+Real input is always tried first, so the tests still catch genuine problems such as hidden or covered elements. When adding a page object, use these helpers instead of calling `click()`, `send_keys()` or `Select` directly.
 
 **How to tell when it fires.** The fallback logs a warning like this:
 
