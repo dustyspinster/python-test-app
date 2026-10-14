@@ -10,8 +10,13 @@ Feature: Products sorting
     And the first product is "<first>"
 
     Examples:
-      | sort                | field | direction    | first                             |
-      | Name (A to Z)       | name  | A to Z       | Sauce Labs Backpack               |
-      | Name (Z to A)       | name  | Z to A       | Test.allTheThings() T-Shirt (Red) |
-      | Price (low to high) | price | low to high  | Sauce Labs Onesie                 |
-      | Price (high to low) | price | high to low  | Sauce Labs Fleece Jacket          |
+      | sort                | field | direction   | first                             |
+      | Name (Z to A)       | name  | Z to A      | Test.allTheThings() T-Shirt (Red) |
+      | Price (low to high) | price | low to high | Sauce Labs Onesie                 |
+      | Price (high to low) | price | high to low | Sauce Labs Fleece Jacket          |
+
+  Scenario: Switching back to name order, A to Z
+    Given I have sorted products by "Name (Z to A)"
+    When I sort products by "Name (A to Z)"
+    Then the products are sorted by name, A to Z
+    And the first product is "Sauce Labs Backpack"

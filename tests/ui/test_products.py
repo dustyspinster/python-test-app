@@ -1,4 +1,4 @@
-from pytest_bdd import parsers, scenarios, then, when
+from pytest_bdd import given, parsers, scenarios, then, when
 
 from pages.inventory_page import InventoryPage
 
@@ -8,6 +8,7 @@ scenarios("features/products.feature")
 DESCENDING = {"A to Z": False, "Z to A": True, "low to high": False, "high to low": True}
 
 
+@given(parsers.parse('I have sorted products by "{sort}"'))
 @when(parsers.parse('I sort products by "{sort}"'))
 def sort_products(browser, sort):
     InventoryPage(browser).sort_by(sort)
