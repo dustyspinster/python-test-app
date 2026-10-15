@@ -15,7 +15,7 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 
 - **Behavior-driven scenarios:** [feature files](tests/ui/features/) in Gherkin describe login, product sorting, cart, checkout, six known bugs and the [booking lifecycle](tests/api/features/bookings.feature) in plain language a product owner can review, using Backgrounds, Scenario Outlines with Examples tables, and step definitions shared across features.
 - **Page object model:** step definitions describe user actions, while locators and waits live in [`pages/`](pages/).
-- **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, search, update, partial update and delete, plus negative cases such as missing records, bad credentials and unauthorized changes.
+- **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, search, update, partial update and delete, plus negative cases such as missing records, bad credentials, unauthorized changes, malformed requests and invalid booking data.
 - **API contract checks:** strict [JSON schemas](tests/api/schemas.py) for every response shape, checking required fields, exact types, real dates and no unexpected fields, with offline tests proving the schemas reject bad data.
 - **Reliable tests:** explicit waits instead of sleeps, and every click or keystroke is checked for its effect rather than assumed to work.
 - **Parallel execution:** [pytest-xdist](https://pytest-xdist.readthedocs.io/) spreads each suite across one worker per CPU core, each UI worker with its own Chrome. Every test sets up its own browser session and data, so tests can run in any order on any worker. On a 4-core machine the UI suite drops from about 65 seconds to 19.
@@ -36,6 +36,7 @@ tests/ui/              UI tests: login, product sorting, cart, checkout, problem
 tests/api/             API tests for Restful-booker, with their own fixtures
   features/            Gherkin scenarios for the booking lifecycle and its permissions
   test_bookings.py     Plain pytest checks for listing, search, authentication and token retry
+  test_validation.py   How the API handles bad input and missing records, including its known bugs
   schemas.py           JSON schemas for each response shape, and the validation helper
 conftest.py            Chrome setup, a logged-in driver fixture, and failure capture
 pyproject.toml         ruff lint and format settings
@@ -172,6 +173,20 @@ Swag Labs' `problem_user` test account is built to misbehave. [`problem_user.fea
 | Checkout | Typing a last name overwrites the first name, so checkout fails with "Last Name is required" |
 
 The product-link and "ITEM NOT FOUND" symptoms are one bug: each link points to product ID + 1, and no product has ID 6.
+
+### Restful-booker mishandles some bad input
+
+[`test_validation.py`](tests/api/test_validation.py) checks that the booking API rejects a client's mistakes with a 4xx status. It handles malformed JSON, unsupported response formats and unknown booking IDs correctly, but not these, which run as strict expected failures with the bug as the reason:
+
+| Request | Restful-booker returns | Expected |
+|---|---|---|
+| A required field missing, or an empty body | 500 Internal Server Error | 400 |
+| `totalprice` that isn't a number | 200, saved as `null` | 400 |
+| Checkout date before the checkin date | 200, saved | 400 |
+| `checkin` that isn't a date | 200, saved | 400 |
+| Updating or deleting a booking that doesn't exist | 405 Method Not Allowed | 404 |
+
+The tests expect only what any REST API should do, since Restful-booker publishes no validation rules; negative prices and empty names aren't treated as bugs for the same reason. Any booking the API wrongly saves is deleted when the test ends.
 
 ### Restful-booker resets every 10 minutes
 
