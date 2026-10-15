@@ -72,7 +72,8 @@ def click(
             return
         raise AssertionError(f"Clicking {locator} had no visible effect")
 
-    log.warning("Chrome dropped the click on %s; clicking via JavaScript", locator)
+    # Usually Chrome's input bug, but an app that ignores the input looks the same until the fallback
+    log.warning("Clicking %s had no effect (Chrome may have dropped it); clicking via JavaScript", locator)
     driver.execute_script("arguments[0].click();", elements[0])
     if not _happened(driver, done, settle):
         raise AssertionError(f"Clicking {locator} had no effect, even via JavaScript")
@@ -90,7 +91,9 @@ def type_text(driver: WebDriver, locator: Locator, text: str, timeout: float = 1
     if _happened(driver, has_text, settle):
         return
 
-    log.warning("Chrome dropped typing into %s; setting the value via JavaScript", locator)
+    log.warning(
+        "Typing into %s had no effect (Chrome may have dropped it); setting it via JavaScript", locator
+    )
     driver.execute_script(SET_VALUE_JS, driver.find_element(*locator), text)
     if not _happened(driver, has_text, settle):
         raise AssertionError(f"Field {locator} did not keep {text!r}, even via JavaScript")
@@ -109,7 +112,9 @@ def choose_option(
     if _happened(driver, chosen, settle):
         return
 
-    log.warning("Chrome dropped choosing %r in %s; choosing via JavaScript", text, locator)
+    log.warning(
+        "Choosing %r in %s had no effect (Chrome may have dropped it); choosing via JavaScript", text, locator
+    )
     driver.execute_script(SELECT_OPTION_JS, driver.find_element(*locator), text)
     if not _happened(driver, chosen, settle):
         raise AssertionError(f"Dropdown {locator} did not keep {text!r}, even via JavaScript")

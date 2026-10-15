@@ -18,6 +18,7 @@ class InventoryPage:
     SORT_MENU = (By.CSS_SELECTOR, "[data-test='product-sort-container']")
     ITEM_NAMES = (By.CSS_SELECTOR, "[data-test='inventory-item-name']")
     ITEM_PRICES = (By.CSS_SELECTOR, "[data-test='inventory-item-price']")
+    ITEM_IMAGES = (By.CSS_SELECTOR, ".inventory_item_img img")
 
     def __init__(self, driver: WebDriver) -> None:
         self.driver = driver
@@ -51,3 +52,13 @@ class InventoryPage:
     def product_prices(self) -> list[float]:
         # "$29.99" -> 29.99
         return [float(el.text.lstrip("$")) for el in self.driver.find_elements(*self.ITEM_PRICES)]
+
+    def product_image_files(self) -> list[str]:
+        # Just the file name, such as "sauce-backpack-1200x1500.jpg"
+        images = self.driver.find_elements(*self.ITEM_IMAGES)
+        return [el.get_attribute("src").rsplit("/", 1)[-1] for el in images]
+
+    def open_product(self, name: str) -> None:
+        # Click the product's name, which links to its details page
+        locator = (By.XPATH, f"//*[@data-test='inventory-item-name'][normalize-space()='{name}']")
+        click(self.driver, locator, EC.url_contains("inventory-item.html"))
