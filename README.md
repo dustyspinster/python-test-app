@@ -6,14 +6,14 @@
 
 Automated UI and API tests written in Python with pytest, with user-facing behavior described in Gherkin and run by [pytest-bdd](https://pytest-bdd.readthedocs.io/):
 
-- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, product sorting, cart, and checkout, all written as Gherkin scenarios.
+- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, product sorting, cart, checkout, and the deliberate bugs of Swag Labs' `problem_user` account, all written as Gherkin scenarios.
 - **API tests** exercise the [Restful-booker](https://restful-booker.herokuapp.com) API with `requests`: authentication, and creating, reading, searching, updating, partially updating and deleting bookings, with every JSON response validated against a schema.
 
 Tests run on every push and pull request, nightly at 9:00 UTC, and on demand through GitHub Actions.
 
 ## What this demonstrates
 
-- **Behavior-driven scenarios:** [feature files](tests/ui/features/) in Gherkin describe login, product sorting, cart, checkout and the [booking lifecycle](tests/api/features/bookings.feature) in plain language a product owner can review, using Backgrounds, Scenario Outlines with Examples tables, and step definitions shared across features.
+- **Behavior-driven scenarios:** [feature files](tests/ui/features/) in Gherkin describe login, product sorting, cart, checkout, six known bugs and the [booking lifecycle](tests/api/features/bookings.feature) in plain language a product owner can review, using Backgrounds, Scenario Outlines with Examples tables, and step definitions shared across features.
 - **Page object model:** step definitions describe user actions, while locators and waits live in [`pages/`](pages/).
 - **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, search, update, partial update and delete, plus negative cases such as missing records, bad credentials and unauthorized changes.
 - **API contract checks:** strict [JSON schemas](tests/api/schemas.py) for every response shape, checking required fields, exact types, real dates and no unexpected fields, with offline tests proving the schemas reject bad data.
@@ -29,7 +29,7 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 ```
 pages/                 Page objects for the Swag Labs UI
   interactions.py      Click and type helpers that confirm each action took effect (see Known issues)
-tests/ui/              UI tests: login, product sorting, cart, checkout
+tests/ui/              UI tests: login, product sorting, cart, checkout, problem_user bugs
   features/            Gherkin feature files, one per area
   conftest.py          Step definitions shared by more than one feature
   test_*.py            Each module runs one feature file and holds its own step definitions
@@ -135,7 +135,7 @@ Real input is always tried first, so the tests still catch genuine problems such
 **How to tell when it fires.** The fallback logs a warning like this:
 
 ```
-WARNING  pages.interactions:interactions.py:49 Chrome dropped the click on ('id', 'checkout'); clicking via JavaScript
+WARNING  pages.interactions:interactions.py:76 Clicking ('id', 'checkout') had no effect (Chrome may have dropped it); clicking via JavaScript
 ```
 
 pytest only prints logs for failing tests by default. To see the warnings for passing tests too, check each test's captured log in the UI test report, or run with live logging:
@@ -146,7 +146,7 @@ pytest -v -o log_cli=true --log-cli-level=WARNING
 
 Live logging doesn't work with parallel workers (`-n`). For a parallel run, add `-rP` instead, which prints each passing test's captured log after the run.
 
-A passing test with these warnings means the fallback handled a dropped input. If Chrome fixes the bug and the warnings stop appearing, the fallback can be removed.
+A passing test with these warnings means the fallback handled a dropped input. If the JavaScript attempt has no effect either, the test fails with an error ending in "even via JavaScript": the app itself ignored the action, which is a real bug rather than Chrome's. If Chrome fixes the bug and the warnings stop appearing, the fallback can be removed.
 
 For the full investigation, see the [case study](docs/chrome-dropped-input.md).
 
@@ -157,6 +157,21 @@ For the full investigation, see the [case study](docs/chrome-dropped-input.md).
 **Cause.** Swag Labs adds prices as floating-point numbers, which can't store most cents exactly: in JavaScript, `29.99 + 9.99 + 15.99 + 49.99` is `105.96000000000001`. The site rounds the tax and total before displaying them but not the item total. Many carts happen to add up cleanly, which is why the two-item checks didn't catch it; this four-item cart doesn't.
 
 **How the suite handles it.** The scenario is tagged `@known-bug`, which [`tests/ui/conftest.py`](tests/ui/conftest.py) turns into a strict expected failure. It still runs on every build and appears in the report as expected to fail, without failing CI. Only a failed assertion counts as the known bug, so a timeout or crash still fails the test. If Swag Labs fixes the bug, the scenario passes unexpectedly, which fails the build as a reminder to remove the tag. The expected amounts are worked out by hand in the feature file rather than calculated by the test, so the test doesn't repeat the site's mistake.
+
+### `problem_user` has six deliberate bugs
+
+Swag Labs' `problem_user` test account is built to misbehave. [`problem_user.feature`](tests/ui/features/problem_user.feature) describes the correct behavior for each bug, and each scenario is tagged `@known-bug`, so it runs on every build as a strict expected failure, handled the same way as the unrounded item total above. Each bug was confirmed by comparing `problem_user` with `standard_user`:
+
+| Bug | What `problem_user` sees |
+|---|---|
+| Product images | All six products show the same "404" placeholder image |
+| Sorting | Choosing a sort option does nothing; the menu snaps back to Name (A to Z) |
+| Add to cart | Does nothing for the Bolt T-Shirt, Fleece Jacket and Red T-Shirt |
+| Remove | Does nothing for any product in the cart |
+| Product links | Every link opens the next product's page (Backpack opens the Fleece Jacket); the Fleece Jacket, which has the highest product ID, opens "ITEM NOT FOUND" |
+| Checkout | Typing a last name overwrites the first name, so checkout fails with "Last Name is required" |
+
+The product-link and "ITEM NOT FOUND" symptoms are one bug: each link points to product ID + 1, and no product has ID 6.
 
 ### Restful-booker resets every 10 minutes
 

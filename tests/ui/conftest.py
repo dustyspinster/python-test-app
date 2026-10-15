@@ -5,6 +5,7 @@ from pytest_bdd import given, parsers, then, when
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from pages.checkout_page import CheckoutPage
 from pages.inventory_page import InventoryPage, product_id
 from pages.login_page import LoginPage
 
@@ -39,6 +40,7 @@ def logged_in_as(driver, username):
 
 
 @given(parsers.parse('I have added "{product}" to my cart'))
+@given(parsers.parse('I have clicked add to cart on "{product}"'))
 @when(parsers.parse('I add "{product}" to my cart'))
 def add_product(browser, product):
     inventory = InventoryPage(browser)
@@ -69,3 +71,51 @@ def on_inventory(browser):
 @then(parsers.parse("my cart badge shows {count:d}"))
 def cart_badge(browser, count):
     assert InventoryPage(browser).cart_count() == count
+
+
+@given("I am on the checkout information page")
+def checkout_information_page(browser):
+    # Open the form directly; the full click-through path is covered by the purchase scenario
+    browser.get(CheckoutPage.URL)
+
+
+# [^"]* rather than {}, so an Examples cell can be empty
+@when(
+    parsers.re(
+        r'I enter first name "(?P<first>[^"]*)", last name "(?P<last>[^"]*)"'
+        r' and postal code "(?P<postal>[^"]*)"'
+    )
+)
+def enter_details(browser, first, last, postal):
+    CheckoutPage(browser).fill_information(first, last, postal)
+
+
+@when(parsers.parse('I remove "{product}" from my cart'))
+@when(parsers.parse('I click Remove on "{product}"'))
+def remove_product(browser, product):
+    InventoryPage(browser).remove_from_cart(product_id(product))
+
+
+# Which way each direction in the feature file runs
+DESCENDING = {"A to Z": False, "Z to A": True, "low to high": False, "high to low": True}
+
+
+@given(parsers.parse('I have sorted products by "{sort}"'))
+@when(parsers.parse('I sort products by "{sort}"'))
+def sort_products(browser, sort):
+    InventoryPage(browser).sort_by(sort)
+
+
+@then(parsers.parse("the products are sorted by {field}, {direction}"))
+def products_sorted(browser, field, direction):
+    page = InventoryPage(browser)
+    values = page.product_names() if field == "name" else page.product_prices()
+    # Python checks the order independently of the site's own sorting code
+    assert values == sorted(values, reverse=DESCENDING[direction])
+
+
+@then(parsers.parse('the first product is "{name}"'))
+def first_product(browser, name):
+    # Also guards against an empty list, which would count as sorted
+    names = InventoryPage(browser).product_names()
+    assert names and names[0] == name
