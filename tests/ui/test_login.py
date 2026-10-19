@@ -17,11 +17,6 @@ def log_in(browser, username, password):
     LoginPage(browser).login(username, password)
 
 
-@then(parsers.parse('I see the login error "{error}"'))
-def login_error(browser, error):
-    assert error in LoginPage(browser).error_message()
-
-
 @then("I am still on the login page")
 def still_on_login(browser):
     assert "inventory" not in browser.current_url

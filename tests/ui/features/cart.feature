@@ -22,3 +22,23 @@ Feature: Shopping cart
     Given I have added "Sauce Labs Backpack" to my cart
     When I open my cart
     Then my cart lists "Sauce Labs Backpack"
+
+  Scenario: Continue Shopping keeps the cart
+    Given I have added "Sauce Labs Backpack" to my cart
+    When I open my cart
+    And I continue shopping
+    Then I see the product inventory
+    And my cart badge shows 1
+
+  Scenario: The cart is saved after logging out and back in
+    Given I have added "Sauce Labs Backpack" to my cart
+    When I log out
+    And I log back in as standard_user
+    Then my cart badge shows 1
+
+  @known-bug
+  Scenario: The app state is reset and fully empties the cart
+    Given I have added "Sauce Labs Backpack" to my cart
+    When I click reset the app state
+    Then my cart badge shows 0
+    And the button under "Sauce Labs Backpack" shows Add to cart

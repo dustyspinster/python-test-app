@@ -12,6 +12,7 @@ class CartPage:
     # The inventory page uses the same class for its item names, so only search inside CART_LIST
     ITEM_NAMES = (By.CLASS_NAME, "inventory_item_name")
     CHECKOUT_BUTTON = (By.ID, "checkout")
+    CONTINUE_SHOPPING_BUTTON = (By.ID, "continue-shopping")
 
     def __init__(self, driver: WebDriver) -> None:
         self.driver = driver
@@ -23,3 +24,6 @@ class CartPage:
 
     def checkout(self) -> None:
         click(self.driver, self.CHECKOUT_BUTTON, EC.url_contains("checkout-step-one"))
+
+    def continue_shopping(self) -> None:
+        click(self.driver, self.CONTINUE_SHOPPING_BUTTON, EC.url_contains("inventory.html"))

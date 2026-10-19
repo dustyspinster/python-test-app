@@ -5,9 +5,11 @@ from pytest_bdd import given, parsers, then, when
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from pages.cart_page import CartPage
 from pages.checkout_page import CheckoutPage
 from pages.inventory_page import InventoryPage, product_id
 from pages.login_page import LoginPage
+from pages.menu import Menu
 
 
 def pytest_bdd_apply_tag(tag, function):
@@ -30,6 +32,7 @@ def logged_in(logged_in_driver):
 
 
 @given(parsers.parse("I am logged in as {username}"), target_fixture="browser")
+@when(parsers.parse("I log back in as {username}"), target_fixture="browser")
 def logged_in_as(driver, username):
     # All Swag Labs test users share this password
     page = LoginPage(driver)
@@ -119,3 +122,42 @@ def first_product(browser, name):
     # Also guards against an empty list, which would count as sorted
     names = InventoryPage(browser).product_names()
     assert names and names[0] == name
+
+
+@then(parsers.parse('I see the login error "{error}"'))
+def login_error(browser, error):
+    assert error in LoginPage(browser).error_message()
+
+
+@given("I have logged out")
+@when("I log out")
+def log_out(browser):
+    Menu(browser).log_out()
+
+
+@then("I see the login page")
+def on_login_page(browser):
+    # The login form is showing and the shopper isn't on any logged-in page
+    assert browser.find_elements(*LoginPage.LOGIN_BUTTON)
+    assert "inventory" not in browser.current_url
+
+
+@when("I open the products page directly")
+def open_products_page_directly(browser):
+    browser.get(InventoryPage.URL)
+
+
+@when("I continue shopping")
+def continue_shopping(browser):
+    CartPage(browser).continue_shopping()
+
+
+@when("I reset the app state")
+@when("I click reset the app state")
+def reset_app_state(browser):
+    Menu(browser).reset_app_state()
+
+
+@then(parsers.parse('the button under "{product}" shows {label}'))
+def cart_button_label(browser, product, label):
+    assert InventoryPage(browser).cart_button_text(product_id(product)) == label

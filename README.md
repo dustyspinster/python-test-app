@@ -6,14 +6,14 @@
 
 Automated UI and API tests written in Python with pytest, with user-facing behavior described in Gherkin and run by [pytest-bdd](https://pytest-bdd.readthedocs.io/):
 
-- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, product sorting, cart, checkout, and the deliberate bugs of Swag Labs' `problem_user` account, all written as Gherkin scenarios.
+- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, logout, product sorting, cart, checkout, and the deliberate bugs of Swag Labs' `problem_user` account, all written as Gherkin scenarios.
 - **API tests** exercise the [Restful-booker](https://restful-booker.herokuapp.com) API with `requests`: authentication, and creating, reading, searching, updating, partially updating and deleting bookings, with every JSON response validated against a schema.
 
 Tests run on every push and pull request, nightly at 9:00 UTC, and on demand through GitHub Actions.
 
 ## What this demonstrates
 
-- **Behavior-driven scenarios:** [feature files](tests/ui/features/) in Gherkin describe login, product sorting, cart, checkout, six known bugs and the [booking lifecycle](tests/api/features/bookings.feature) in plain language a product owner can review, using Backgrounds, Scenario Outlines with Examples tables, and step definitions shared across features.
+- **Behavior-driven scenarios:** [feature files](tests/ui/features/) in Gherkin describe login, logout, product sorting, cart, checkout, known bugs and the [booking lifecycle](tests/api/features/bookings.feature) in plain language a product owner can review, using Backgrounds, Scenario Outlines with Examples tables, and step definitions shared across features.
 - **Page object model:** step definitions describe user actions, while locators and waits live in [`pages/`](pages/).
 - **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, search, update, partial update and delete, plus negative cases such as missing records, bad credentials, unauthorized changes, malformed requests and invalid booking data.
 - **API contract checks:** strict [JSON schemas](tests/api/schemas.py) for every response shape, checking required fields, exact types, real dates and no unexpected fields, with offline tests proving the schemas reject bad data.
@@ -29,7 +29,7 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 ```
 pages/                 Page objects for the Swag Labs UI
   interactions.py      Click and type helpers that confirm each action took effect (see Known issues)
-tests/ui/              UI tests: login, product sorting, cart, checkout, problem_user bugs
+tests/ui/              UI tests: login, logout, product sorting, cart, checkout, problem_user bugs
   features/            Gherkin feature files, one per area
   conftest.py          Step definitions shared by more than one feature
   test_*.py            Each module runs one feature file and holds its own step definitions
@@ -158,6 +158,12 @@ For the full investigation, see the [case study](docs/chrome-dropped-input.md).
 **Cause.** Swag Labs adds prices as floating-point numbers, which can't store most cents exactly: in JavaScript, `29.99 + 9.99 + 15.99 + 49.99` is `105.96000000000001`. The site rounds the tax and total before displaying them but not the item total. Many carts happen to add up cleanly, which is why the two-item checks didn't catch it; this four-item cart doesn't.
 
 **How the suite handles it.** The scenario is tagged `@known-bug`, which [`tests/ui/conftest.py`](tests/ui/conftest.py) turns into a strict expected failure. It still runs on every build and appears in the report as expected to fail, without failing CI. Only a failed assertion counts as the known bug, so a timeout or crash still fails the test. If Swag Labs fixes the bug, the scenario passes unexpectedly, which fails the build as a reminder to remove the tag. The expected amounts are worked out by hand in the feature file rather than calculated by the test, so the test doesn't repeat the site's mistake.
+
+### Reset App State leaves products marked as in the cart
+
+**Symptom.** After adding a product and choosing **Reset App State** from the menu, the cart badge clears, but the product's button still says **Remove** instead of **Add to cart**, so the page shows the product as in a cart that is now empty.
+
+**How the suite handles it.** The scenario *The app state is reset and fully empties the cart* in [`cart.feature`](tests/ui/features/cart.feature) is tagged `@known-bug`. It checks the badge first, which passes, and then the button, which fails, so the report shows the reset working for the cart but not for the products page.
 
 ### `problem_user` has six deliberate bugs
 
