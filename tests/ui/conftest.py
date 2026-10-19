@@ -5,6 +5,7 @@ from pytest_bdd import given, parsers, then, when
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from pages.cart_page import CartPage
 from pages.checkout_page import CheckoutPage
 from pages.inventory_page import InventoryPage, product_id
 from pages.login_page import LoginPage
@@ -31,6 +32,7 @@ def logged_in(logged_in_driver):
 
 
 @given(parsers.parse("I am logged in as {username}"), target_fixture="browser")
+@when(parsers.parse("I log back in as {username}"), target_fixture="browser")
 def logged_in_as(driver, username):
     # All Swag Labs test users share this password
     page = LoginPage(driver)
@@ -143,3 +145,8 @@ def on_login_page(browser):
 @when("I open the products page directly")
 def open_products_page_directly(browser):
     browser.get(InventoryPage.URL)
+
+
+@when("I continue shopping")
+def continue_shopping(browser):
+    CartPage(browser).continue_shopping()
