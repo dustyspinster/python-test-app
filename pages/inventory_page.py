@@ -63,3 +63,10 @@ class InventoryPage:
         # Click the product's name, which links to its details page
         locator = (By.XPATH, f"//*[@data-test='inventory-item-name'][normalize-space()='{name}']")
         click(self.driver, locator, EC.url_contains("inventory-item.html"))
+
+    def cart_button_text(self, product_id: str) -> str:
+        # A product shows "Add to cart" or "Remove", and the button's ID changes with it
+        buttons = self.driver.find_elements(By.ID, f"add-to-cart-{product_id}") or self.driver.find_elements(
+            By.ID, f"remove-{product_id}"
+        )
+        return buttons[0].text if buttons else ""

@@ -11,6 +11,8 @@ class Menu:
 
     OPEN_BUTTON = (By.ID, "react-burger-menu-btn")
     LOGOUT = (By.ID, "logout_sidebar_link")
+    RESET = (By.ID, "reset_sidebar_link")
+    CART_BADGE = (By.CLASS_NAME, "shopping_cart_badge")
 
     def __init__(self, driver: WebDriver) -> None:
         self.driver = driver
@@ -22,3 +24,7 @@ class Menu:
 
     def log_out(self) -> None:
         self._choose(self.LOGOUT, EC.presence_of_element_located(LoginPage.LOGIN_BUTTON))
+
+    def reset_app_state(self) -> None:
+        # Resetting clears the cart, so wait for the cart badge to disappear
+        self._choose(self.RESET, EC.invisibility_of_element_located(self.CART_BADGE))

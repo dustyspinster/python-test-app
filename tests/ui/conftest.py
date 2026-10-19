@@ -150,3 +150,14 @@ def open_products_page_directly(browser):
 @when("I continue shopping")
 def continue_shopping(browser):
     CartPage(browser).continue_shopping()
+
+
+@when("I reset the app state")
+@when("I click reset the app state")
+def reset_app_state(browser):
+    Menu(browser).reset_app_state()
+
+
+@then(parsers.parse('the button under "{product}" shows {label}'))
+def cart_button_label(browser, product, label):
+    assert InventoryPage(browser).cart_button_text(product_id(product)) == label
