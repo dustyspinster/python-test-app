@@ -13,6 +13,7 @@ def product_id(name: str) -> str:
 
 
 class InventoryPage:
+    URL = "https://www.saucedemo.com/inventory.html"
     CART_BADGE = (By.CLASS_NAME, "shopping_cart_badge")
     CART_LINK = (By.CLASS_NAME, "shopping_cart_link")
     SORT_MENU = (By.CSS_SELECTOR, "[data-test='product-sort-container']")
