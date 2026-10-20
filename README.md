@@ -6,7 +6,7 @@
 
 Automated UI and API tests written in Python with pytest, with user-facing behavior described in Gherkin and run by [pytest-bdd](https://pytest-bdd.readthedocs.io/):
 
-- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, logout, product sorting, cart, checkout, and the deliberate bugs of Swag Labs' `problem_user` account, all written as Gherkin scenarios.
+- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, logout, product sorting, cart, checkout, accessibility, and the deliberate bugs of Swag Labs' `problem_user` account, all written as Gherkin scenarios.
 - **API tests** exercise the [Restful-booker](https://restful-booker.herokuapp.com) API with `requests`: authentication, and creating, reading, searching, updating, partially updating and deleting bookings, with every JSON response validated against a schema.
 
 Tests run on every push and pull request, nightly at 9:00 UTC, and on demand through GitHub Actions.
@@ -18,6 +18,7 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 - **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, search, update, partial update and delete, plus negative cases such as missing records, bad credentials, unauthorized changes, malformed requests and invalid booking data.
 - **API contract checks:** strict [JSON schemas](tests/api/schemas.py) for every response shape, checking required fields, exact types, real dates and no unexpected fields, with offline tests proving the schemas reject bad data.
 - **Reliable tests:** explicit waits instead of sleeps, and every click or keystroke is checked for its effect rather than assumed to work.
+- **Accessibility testing:** every page is scanned with [axe-core](https://github.com/dequelabs/axe-core) against the WCAG 2.0–2.2 Level A and AA rules, the standard behind Section 508. Keyboard access is checked separately, because automated scans miss it: the scan reports Swag Labs clean, yet two WCAG failures were found by checking focus directly (see Known issues).
 - **Parallel execution:** [pytest-xdist](https://pytest-xdist.readthedocs.io/) spreads each suite across one worker per CPU core, each UI worker with its own Chrome. Every test sets up its own browser session and data, so tests can run in any order on any worker. On a 4-core machine the UI suite drops from about 65 seconds to 19.
 - **Continuous integration:** GitHub Actions runs linting, API tests and headless UI tests as separate parallel jobs on every push, pull request and night, uploads an HTML report for each test job, and publishes the reports from `main` to GitHub Pages.
 - **Code quality:** type-hinted page objects, with linting and formatting enforced by [ruff](https://docs.astral.sh/ruff/) in CI.
@@ -29,7 +30,7 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 ```
 pages/                 Page objects for the Swag Labs UI
   interactions.py      Click and type helpers that confirm each action took effect (see Known issues)
-tests/ui/              UI tests: login, logout, product sorting, cart, checkout, problem_user bugs
+tests/ui/              UI tests: login, logout, product sorting, cart, checkout, accessibility, problem_user bugs
   features/            Gherkin feature files, one per area
   conftest.py          Step definitions shared by more than one feature
   test_*.py            Each module runs one feature file and holds its own step definitions
@@ -158,6 +159,19 @@ For the full investigation, see the [case study](docs/chrome-dropped-input.md).
 **Cause.** Swag Labs adds prices as floating-point numbers, which can't store most cents exactly: in JavaScript, `29.99 + 9.99 + 15.99 + 49.99` is `105.96000000000001`. The site rounds the tax and total before displaying them but not the item total. Many carts happen to add up cleanly, which is why the two-item checks didn't catch it; this four-item cart doesn't.
 
 **How the suite handles it.** The scenario is tagged `@known-bug`, which [`tests/ui/conftest.py`](tests/ui/conftest.py) turns into a strict expected failure. It still runs on every build and appears in the report as expected to fail, without failing CI. Only a failed assertion counts as the known bug, so a timeout or crash still fails the test. If Swag Labs fixes the bug, the scenario passes unexpectedly, which fails the build as a reminder to remove the tag. The expected amounts are worked out by hand in the feature file rather than calculated by the test, so the test doesn't repeat the site's mistake.
+
+### Two keyboard accessibility failures the automated scan misses
+
+[`accessibility.feature`](tests/ui/features/accessibility.feature) scans every page with axe-core using the WCAG 2.2 Level A and AA rules. All seven pages pass, but checking keyboard support directly finds two failures, both tagged `@known-bug`:
+
+| Problem | WCAG criterion |
+|---|---|
+| The shopping cart link can't receive keyboard focus: it's an `<a>` with no `href`, so Tab skips it, even though it's announced to screen readers as a "Cart" button | [2.1.1 Keyboard](https://www.w3.org/WAI/WCAG22/Understanding/keyboard.html) (Level A) |
+| The Login button looks identical with and without keyboard focus: the site removes the browser's focus outline and adds nothing in its place | [2.4.7 Focus Visible](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html) (Level AA) |
+
+**Why keyboard support is checked without pressing keys.** Headless Chrome drops simulated key presses the same way it drops clicks (see the first Known issue), so a test that presses Tab and Enter fails at random. Instead, [`pages/accessibility.py`](pages/accessibility.py) checks what keyboard use depends on: whether an element can receive focus, the order Tab moves in, whether the login fields sit in a form that Enter submits, and whether focusing an element changes how it looks. The focus-appearance check only covers the login page, where the browser reliably enters its keyboard-focus state; after a mouse-driven login it often doesn't, which would make the result meaningless.
+
+**What the scan leaves for a person.** axe reports some items it can't decide, such as color contrast on the menu and cart buttons, as needing review. The tests log these as warnings in the report rather than failing. The username and password fields show only the blinking text cursor when focused; W3C's guidance counts that as a focus indicator, so they aren't treated as failures, though a stronger indicator would help.
 
 ### Reset App State leaves products marked as in the cart
 
