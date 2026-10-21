@@ -6,14 +6,14 @@
 
 Automated UI and API tests written in Python with pytest, with user-facing behavior described in Gherkin and run by [pytest-bdd](https://pytest-bdd.readthedocs.io/):
 
-- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, logout, product sorting, cart, checkout, accessibility, and the deliberate bugs of Swag Labs' `problem_user` account, all written as Gherkin scenarios.
+- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, logout, product sorting, product details, cart, checkout, accessibility, and the deliberate bugs of Swag Labs' `problem_user` account, all written as Gherkin scenarios.
 - **API tests** exercise the [Restful-booker](https://restful-booker.herokuapp.com) API with `requests`: authentication, and creating, reading, searching, updating, partially updating and deleting bookings, with every JSON response validated against a schema.
 
 Tests run on every push and pull request, nightly at 9:00 UTC, and on demand through GitHub Actions.
 
 ## What this demonstrates
 
-- **Behavior-driven scenarios:** [feature files](tests/ui/features/) in Gherkin describe login, logout, product sorting, cart, checkout, known bugs and the [booking lifecycle](tests/api/features/bookings.feature) in plain language a product owner can review, using Backgrounds, Scenario Outlines with Examples tables, and step definitions shared across features.
+- **Behavior-driven scenarios:** [feature files](tests/ui/features/) in Gherkin describe login, logout, product sorting, product details, cart, checkout, known bugs and the [booking lifecycle](tests/api/features/bookings.feature) in plain language a product owner can review, using Backgrounds, Scenario Outlines with Examples tables, and step definitions shared across features.
 - **Page object model:** step definitions describe user actions, while locators and waits live in [`pages/`](pages/).
 - **UI and API testing:** browser tests with Selenium, and REST API tests with `requests` covering authentication, create, read, search, update, partial update and delete, plus negative cases such as missing records, bad credentials, unauthorized changes, malformed requests and invalid booking data.
 - **API contract checks:** strict [JSON schemas](tests/api/schemas.py) for every response shape, checking required fields, exact types, real dates and no unexpected fields, with offline tests proving the schemas reject bad data.
@@ -30,7 +30,7 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 ```
 pages/                 Page objects for the Swag Labs UI
   interactions.py      Click and type helpers that confirm each action took effect (see Known issues)
-tests/ui/              UI tests: login, logout, product sorting, cart, checkout, accessibility, problem_user bugs
+tests/ui/              UI tests: login, logout, sorting, product details, cart, checkout, accessibility, problem_user bugs
   features/            Gherkin feature files, one per area
   conftest.py          Step definitions shared by more than one feature
   test_*.py            Each module runs one feature file and holds its own step definitions
