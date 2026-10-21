@@ -54,6 +54,15 @@ class InventoryPage:
         # "$29.99" -> 29.99
         return [float(el.text.lstrip("$")) for el in self.driver.find_elements(*self.ITEM_PRICES)]
 
+    def product_price(self, name: str) -> str:
+        # The price as displayed, such as "$29.99", read from the same product card as the name
+        locator = (
+            By.XPATH,
+            f"//*[@data-test='inventory-item'][.//*[@data-test='inventory-item-name'][normalize-space()='{name}']]"
+            "//*[@data-test='inventory-item-price']",
+        )
+        return self.wait.until(EC.visibility_of_element_located(locator)).text
+
     def product_image_files(self) -> list[str]:
         # Just the file name, such as "sauce-backpack-1200x1500.jpg"
         images = self.driver.find_elements(*self.ITEM_IMAGES)
