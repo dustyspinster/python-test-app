@@ -9,9 +9,12 @@ from pages.interactions import click
 class ProductPage:
     """A single product's details page, reached by clicking its name on the products page."""
 
-    # Shows "ITEM NOT FOUND" when the page's product ID doesn't exist
-    NAME = (By.CSS_SELECTOR, "[data-test='inventory-item-name']")
-    PRICE = (By.CSS_SELECTOR, "[data-test='inventory-item-price']")
+    # Only on this page; the products page has none
+    BACK_TO_PRODUCTS = (By.ID, "back-to-products")
+    # The products page uses the same data-test names, so look only inside this page's container.
+    # NAME shows "ITEM NOT FOUND" when the page's product ID doesn't exist
+    NAME = (By.CSS_SELECTOR, "#inventory_item_container [data-test='inventory-item-name']")
+    PRICE = (By.CSS_SELECTOR, "#inventory_item_container [data-test='inventory-item-price']")
     # Unlike the products page, these IDs don't include the product name
     ADD_TO_CART = (By.ID, "add-to-cart")
     REMOVE = (By.ID, "remove")
