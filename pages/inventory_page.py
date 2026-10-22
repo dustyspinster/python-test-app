@@ -5,6 +5,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from pages.cart_page import CartPage
 from pages.interactions import choose_option, click
+from pages.product_page import ProductPage
 
 
 def product_id(name: str) -> str:
@@ -69,9 +70,11 @@ class InventoryPage:
         return [el.get_attribute("src").rsplit("/", 1)[-1] for el in images]
 
     def open_product(self, name: str) -> None:
-        # Click the product's name, which links to its details page
+        # Click the product's name, which links to its details page. Wait for that page to render, not
+        # for the URL: the URL changes while the product list is still showing, and both pages share
+        # data-test names
         locator = (By.XPATH, f"//*[@data-test='inventory-item-name'][normalize-space()='{name}']")
-        click(self.driver, locator, EC.url_contains("inventory-item.html"))
+        click(self.driver, locator, EC.presence_of_element_located(ProductPage.BACK_TO_PRODUCTS))
 
     def cart_button_text(self, product_id: str) -> str:
         # A product shows "Add to cart" or "Remove", and the button's ID changes with it
