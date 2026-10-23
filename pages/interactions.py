@@ -47,6 +47,31 @@ select.dispatchEvent(new Event('change', { bubbles: true }));
 """
 
 
+# Once Chrome starts dropping input on a page it keeps dropping it, so after one confirmed drop
+# the rest of that page's actions go straight to JavaScript instead of waiting out real input.
+# The flag lives in the page, so a new page load clears it and real input is tried again.
+INPUT_DROPPED_JS = "return window.__inputDropped === true;"
+MARK_INPUT_DROPPED_JS = "window.__inputDropped = arguments[0];"
+
+
+def _input_dropped(driver: WebDriver) -> bool:
+    return bool(driver.execute_script(INPUT_DROPPED_JS))
+
+
+def _fallback(driver: WebDriver, action: Callable[[], None], confirmed: Callable[[], bool]) -> bool:
+    """Do the action via JavaScript, keeping the page marked as dropping input only if it worked.
+
+    Marked first: if the action loads a new page, the old page's flag goes with it.
+    """
+    driver.execute_script(MARK_INPUT_DROPPED_JS, True)
+    action()
+    if confirmed():
+        return True
+    # JavaScript failed too, so the app ignored the action; that's not Chrome dropping input
+    driver.execute_script(MARK_INPUT_DROPPED_JS, False)
+    return False
+
+
 def _happened(driver: WebDriver, done: Condition, timeout: float) -> bool:
     try:
         WebDriverWait(
@@ -61,21 +86,31 @@ def click(
     driver: WebDriver, locator: Locator, done: Condition, timeout: float = 10, settle: float = 4
 ) -> None:
     """Click the element, then wait until done(driver) is truthy."""
-    WebDriverWait(driver, timeout).until(EC.element_to_be_clickable(locator)).click()
-    if _happened(driver, done, settle):
-        return
-
-    elements = driver.find_elements(*locator)
-    if not elements:
-        # The element went away, so the click did land and the page is just slow
-        if _happened(driver, done, timeout):
+    element = WebDriverWait(driver, timeout).until(EC.element_to_be_clickable(locator))
+    if _input_dropped(driver):
+        log.warning("Chrome is dropping input on this page; clicking %s via JavaScript", locator)
+    else:
+        element.click()
+        if _happened(driver, done, settle):
             return
-        raise AssertionError(f"Clicking {locator} had no visible effect")
 
-    # Usually Chrome's input bug, but an app that ignores the input looks the same until the fallback
-    log.warning("Clicking %s had no effect (Chrome may have dropped it); clicking via JavaScript", locator)
-    driver.execute_script("arguments[0].click();", elements[0])
-    if not _happened(driver, done, settle):
+        elements = driver.find_elements(*locator)
+        if not elements:
+            # The element went away, so the click did land and the page is just slow
+            if _happened(driver, done, timeout):
+                return
+            raise AssertionError(f"Clicking {locator} had no visible effect")
+
+        # Usually Chrome's input bug, but an app that ignores the input looks the same until the fallback
+        log.warning(
+            "Clicking %s had no effect (Chrome may have dropped it); clicking via JavaScript", locator
+        )
+        element = elements[0]
+
+    def js_click() -> None:
+        driver.execute_script("arguments[0].click();", element)
+
+    if not _fallback(driver, js_click, lambda: _happened(driver, done, settle)):
         raise AssertionError(f"Clicking {locator} had no effect, even via JavaScript")
 
 
@@ -86,16 +121,22 @@ def type_text(driver: WebDriver, locator: Locator, text: str, timeout: float = 1
         return d.find_element(*locator).get_attribute("value") == text
 
     field = WebDriverWait(driver, timeout).until(EC.element_to_be_clickable(locator))
-    field.clear()
-    field.send_keys(text)
-    if _happened(driver, has_text, settle):
-        return
+    if _input_dropped(driver):
+        log.warning("Chrome is dropping input on this page; setting %s via JavaScript", locator)
+    else:
+        field.clear()
+        field.send_keys(text)
+        if _happened(driver, has_text, settle):
+            return
 
-    log.warning(
-        "Typing into %s had no effect (Chrome may have dropped it); setting it via JavaScript", locator
-    )
-    driver.execute_script(SET_VALUE_JS, driver.find_element(*locator), text)
-    if not _happened(driver, has_text, settle):
+        log.warning(
+            "Typing into %s had no effect (Chrome may have dropped it); setting it via JavaScript", locator
+        )
+
+    def js_type() -> None:
+        driver.execute_script(SET_VALUE_JS, driver.find_element(*locator), text)
+
+    if not _fallback(driver, js_type, lambda: _happened(driver, has_text, settle)):
         raise AssertionError(f"Field {locator} did not keep {text!r}, even via JavaScript")
 
 
@@ -108,13 +149,21 @@ def choose_option(
         return Select(d.find_element(*locator)).first_selected_option.text == text
 
     menu = WebDriverWait(driver, timeout).until(EC.element_to_be_clickable(locator))
-    Select(menu).select_by_visible_text(text)
-    if _happened(driver, chosen, settle):
-        return
+    if _input_dropped(driver):
+        log.warning("Chrome is dropping input on this page; choosing %r in %s via JavaScript", text, locator)
+    else:
+        Select(menu).select_by_visible_text(text)
+        if _happened(driver, chosen, settle):
+            return
 
-    log.warning(
-        "Choosing %r in %s had no effect (Chrome may have dropped it); choosing via JavaScript", text, locator
-    )
-    driver.execute_script(SELECT_OPTION_JS, driver.find_element(*locator), text)
-    if not _happened(driver, chosen, settle):
+        log.warning(
+            "Choosing %r in %s had no effect (Chrome may have dropped it); choosing via JavaScript",
+            text,
+            locator,
+        )
+
+    def js_choose() -> None:
+        driver.execute_script(SELECT_OPTION_JS, driver.find_element(*locator), text)
+
+    if not _fallback(driver, js_choose, lambda: _happened(driver, chosen, settle)):
         raise AssertionError(f"Dropdown {locator} did not keep {text!r}, even via JavaScript")
