@@ -66,6 +66,8 @@ Retrying the same input can't help when the browser is dropping it, so the page 
 
 Real input is always tried first, so the tests still catch genuine problems such as hidden or covered elements. The fallback replaced the retry loops in the page objects.
 
+Because a page that drops input keeps dropping it, the helpers then mark the page, and its remaining actions go straight to JavaScript instead of waiting out real input that can't arrive. The mark lives in the page, so the next page load clears it and real input is tried again. If the JavaScript fallback fails too, the app ignored the action rather than Chrome dropping it, so the mark is removed. With every input dropped, this cut the slowest checkout test from 45 seconds to 6.
+
 **Verification:**
 
 - **Simulated failure:** Claude made Selenium's native `click()`, `send_keys()` and `clear()` no-ops through a pytest plugin, so every action had to go through the fallback. All 13 UI tests passed.
