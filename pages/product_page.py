@@ -34,6 +34,18 @@ class ProductPage:
         # The button turns into a Remove button once the item is in the cart
         click(self.driver, self.ADD_TO_CART, EC.presence_of_element_located(self.REMOVE))
 
+    def remove_from_cart(self) -> None:
+        click(self.driver, self.REMOVE, EC.presence_of_element_located(self.ADD_TO_CART))
+
+    def back_to_products(self) -> None:
+        # Done once the product list has replaced this page
+        product_list = (By.CSS_SELECTOR, "[data-test='inventory-list']")
+        click(
+            self.driver,
+            self.BACK_TO_PRODUCTS,
+            lambda d: d.find_elements(*product_list) and not d.find_elements(*self.BACK_TO_PRODUCTS),
+        )
+
     def cart_button_text(self) -> str:
         buttons = self.driver.find_elements(*self.ADD_TO_CART) or self.driver.find_elements(*self.REMOVE)
         return buttons[0].text if buttons else ""

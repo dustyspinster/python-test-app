@@ -35,3 +35,15 @@ A user can browse to a specific product page to learn details of a store item
       | Sauce Labs Fleece Jacket          |
       | Sauce Labs Onesie                 |
       | Test.allTheThings() T-Shirt (Red) |
+
+  Scenario: An item can be removed from cart on the details page
+    Given I have added "Sauce Labs Backpack" to my cart
+    And I am on the "Sauce Labs Backpack" details page
+    When I click "Remove"
+    Then my cart badge shows 0
+    And the details page button shows "Add to cart"
+
+  Scenario: The Back to products button returns to the Products page
+    Given I am on the "Sauce Labs Backpack" details page
+    When I click "Back to products"
+    Then I am taken back to the Products page
