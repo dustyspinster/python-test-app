@@ -10,6 +10,11 @@ from pages.checkout_page import CheckoutPage
 from pages.inventory_page import InventoryPage, product_id
 from pages.login_page import LoginPage
 from pages.menu import Menu
+from pages.product_page import ProductPage
+
+KNOWN_BUG = pytest.mark.xfail(
+    reason="Known Swag Labs bug; see Known issues in the README", raises=AssertionError, strict=True
+)
 
 
 def pytest_bdd_apply_tag(tag, function):
@@ -21,9 +26,49 @@ def pytest_bdd_apply_tag(tag, function):
     """
     if tag != "known-bug":
         return None
-    reason = "Known Swag Labs bug; see Known issues in the README"
-    pytest.mark.xfail(reason=reason, raises=AssertionError, strict=True)(function)
+    KNOWN_BUG(function)
     return True
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "known-bug: a known Swag Labs bug; runs as a strict expected failure")
+
+
+def pytest_collection_modifyitems(items):
+    # A tag on an Examples table reaches only its own rows, as a plain mark that skips the hook above
+    for item in items:
+        if item.get_closest_marker("known-bug") and not item.get_closest_marker("xfail"):
+            item.add_marker(KNOWN_BUG)
+
+
+@given("I am on the login page", target_fixture="browser")
+def login_page(driver):
+    LoginPage(driver).open()
+    return driver
+
+
+# [^"]* rather than {}, so an Examples cell can be empty
+@when(parsers.re(r'I log in as "(?P<username>[^"]*)" with password "(?P<password>[^"]*)"'))
+def log_in(browser, username, password):
+    LoginPage(browser).login(username, password)
+
+
+@given(parsers.parse('I am on the "{product}" details page'))
+@when(parsers.parse('I click on "{product}"'))
+def open_product(browser, product):
+    InventoryPage(browser).open_product(product)
+
+
+@when(parsers.parse('I click "{label}"'))
+def click_details_button(browser, label):
+    page = ProductPage(browser)
+    buttons = {
+        "Add to cart": page.add_to_cart,
+        "Remove": page.remove_from_cart,
+        "Back to products": page.back_to_products,
+    }
+    assert label in buttons, f"No details page button labelled {label!r}"
+    buttons[label]()
 
 
 @given("I am logged in", target_fixture="browser")

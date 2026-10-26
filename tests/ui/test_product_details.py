@@ -1,4 +1,6 @@
 from pytest_bdd import given, parsers, scenarios, then, when
+
+# Opening a product and clicking its details page buttons are shared steps, in conftest.py
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -20,27 +22,9 @@ def list_price(browser, product, price):
     assert InventoryPage(browser).product_price(product) == price
 
 
-@given(parsers.parse('I am on the "{product}" details page'))
-@when(parsers.parse('I click on "{product}"'))
-def click_product(browser, product):
-    InventoryPage(browser).open_product(product)
-
-
 @when("I click Add to cart")
 def click_add_to_cart(browser):
     ProductPage(browser).add_to_cart()
-
-
-@when(parsers.parse('I click "{label}"'))
-def click_details_button(browser, label):
-    page = ProductPage(browser)
-    buttons = {
-        "Add to cart": page.add_to_cart,
-        "Remove": page.remove_from_cart,
-        "Back to products": page.back_to_products,
-    }
-    assert label in buttons, f"No details page button labelled {label!r}"
-    buttons[label]()
 
 
 @then(parsers.parse('the details page button shows "{label}"'))

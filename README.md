@@ -6,7 +6,7 @@
 
 Automated UI and API tests written in Python with pytest, with user-facing behavior described in Gherkin and run by [pytest-bdd](https://pytest-bdd.readthedocs.io/):
 
-- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, logout, product sorting, product details, cart, checkout, accessibility, and the deliberate bugs of Swag Labs' `problem_user` account, all written as Gherkin scenarios.
+- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, logout, product sorting, product details, cart, checkout, accessibility, response times, and the deliberate bugs of Swag Labs' `problem_user` account, all written as Gherkin scenarios.
 - **API tests** exercise the [Restful-booker](https://restful-booker.herokuapp.com) API with `requests`: authentication, and creating, reading, searching, updating, partially updating and deleting bookings, with every JSON response validated against a schema.
 
 Tests run on every push and pull request, nightly at 9:00 UTC, and on demand through GitHub Actions.
@@ -19,6 +19,7 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 - **API contract checks:** strict [JSON schemas](tests/api/schemas.py) for every response shape, checking required fields, exact types, real dates and no unexpected fields, with offline tests proving the schemas reject bad data.
 - **Reliable tests:** explicit waits instead of sleeps, and every click or keystroke is checked for its effect rather than assumed to work.
 - **Accessibility testing:** every page is scanned with [axe-core](https://github.com/dequelabs/axe-core) against the WCAG 2.0–2.2 Level A and AA rules, the standard behind Section 508. Keyboard access is checked separately, because automated scans miss it: the scan reports Swag Labs clean, yet two WCAG failures were found by checking focus directly (see Known issues).
+- **Performance checks:** response-time scenarios with limits in plain language ("within 3 seconds"), timed with the browser's own clock from when the page receives each action, comparing a normal account with Swag Labs' deliberately slow one.
 - **Parallel execution:** [pytest-xdist](https://pytest-xdist.readthedocs.io/) spreads each suite across one worker per CPU core, each UI worker with its own Chrome. Every test sets up its own browser session and data, so tests can run in any order on any worker. On a 4-core machine the UI suite drops from about 65 seconds to 19.
 - **Continuous integration:** GitHub Actions runs linting, API tests and headless UI tests as separate parallel jobs on every push, pull request and night, uploads an HTML report for each test job, and publishes the reports from `main` to GitHub Pages.
 - **Code quality:** type-hinted page objects, with linting and formatting enforced by [ruff](https://docs.astral.sh/ruff/) in CI.
@@ -30,7 +31,9 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 ```
 pages/                 Page objects for the Swag Labs UI
   interactions.py      Click and type helpers that confirm each action took effect (see Known issues)
-tests/ui/              UI tests: login, logout, sorting, product details, cart, checkout, accessibility, problem_user bugs
+  timing.py            Response-time measurement with the browser's own clock
+tests/ui/              UI tests: login, logout, sorting, product details, cart, checkout, accessibility,
+                       performance, problem_user bugs
   features/            Gherkin feature files, one per area
   conftest.py          Step definitions shared by more than one feature
   test_*.py            Each module runs one feature file and holds its own step definitions
@@ -193,6 +196,12 @@ Swag Labs' `problem_user` test account is built to misbehave. [`problem_user.fea
 | Checkout | Typing a last name overwrites the first name, so checkout fails with "Last Name is required" |
 
 The product-link and "ITEM NOT FOUND" symptoms are one bug: each link points to product ID + 1, and no product has ID 6.
+
+### `performance_glitch_user` is slow to show products
+
+**Symptom.** For Swag Labs' `performance_glitch_user` account, logging in takes about 5 seconds to show the products, against well under a second for `standard_user` and `visual_user`. Sorting and returning to the product list are just as slow; adding to the cart is not.
+
+**How the suite handles it.** [`performance.feature`](tests/ui/features/performance.feature) runs each timing scenario for several users, with `performance_glitch_user` in its own `Examples:` table tagged `@known-bug`. The time limit is 3 seconds, far from both the normal times and the glitch, so a slow CI runner doesn't make the result flaky. [`pages/timing.py`](pages/timing.py) times each action with the browser's own clock, from when the page receives the click, so the input fallback described above can't count against the site.
 
 ### Restful-booker mishandles some bad input
 
