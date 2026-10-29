@@ -59,6 +59,23 @@ def open_product(browser, product):
     InventoryPage(browser).open_product(product)
 
 
+@given(parsers.parse('I am on the "{page}" page'))
+def on_page(browser, page):
+    # Logging in lands on the products page, the only page these scenarios start from
+    assert page == "products", f"No route to the {page!r} page"
+    WebDriverWait(browser, 10).until(EC.url_contains("inventory"))
+
+
+@when("I click Add to cart")
+def click_add_to_cart(browser):
+    ProductPage(browser).add_to_cart()
+
+
+@then(parsers.parse('the details page button shows "{label}"'))
+def details_button_label(browser, label):
+    assert ProductPage(browser).cart_button_text() == label
+
+
 @when(parsers.parse('I click "{label}"'))
 def click_details_button(browser, label):
     page = ProductPage(browser)
@@ -136,6 +153,16 @@ def checkout_information_page(browser):
 )
 def enter_details(browser, first, last, postal):
     CheckoutPage(browser).fill_information(first, last, postal)
+
+
+@when("I finish my order")
+def finish_order(browser):
+    CheckoutPage(browser).finish()
+
+
+@then(parsers.parse('I see the order confirmation "{text}"'))
+def order_confirmation(browser, text):
+    assert text in CheckoutPage(browser).confirmation_text()
 
 
 @when(parsers.parse('I remove "{product}" from my cart'))
