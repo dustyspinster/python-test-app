@@ -16,16 +16,6 @@ def cancel_order(browser):
     CheckoutPage(browser).cancel()
 
 
-@when("I finish my order")
-def finish_order(browser):
-    CheckoutPage(browser).finish()
-
-
-@then(parsers.parse('I see the order confirmation "{text}"'))
-def order_confirmation(browser, text):
-    assert text in CheckoutPage(browser).confirmation_text()
-
-
 @then(parsers.parse('I see the checkout error "{error}"'))
 def checkout_error(browser, error):
     assert error in CheckoutPage(browser).error_message()

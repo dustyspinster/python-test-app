@@ -6,7 +6,7 @@
 
 Automated UI and API tests written in Python with pytest, with user-facing behavior described in Gherkin and run by [pytest-bdd](https://pytest-bdd.readthedocs.io/):
 
-- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, logout, product sorting, product details, cart, checkout, accessibility, response times, and the deliberate bugs of Swag Labs' `problem_user` account, all written as Gherkin scenarios.
+- **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, logout, product sorting, product details, cart, checkout, accessibility, response times, and the deliberate bugs of Swag Labs' `problem_user` and `error_user` accounts, all written as Gherkin scenarios.
 - **API tests** exercise the [Restful-booker](https://restful-booker.herokuapp.com) API with `requests`: authentication, and creating, reading, searching, updating, partially updating and deleting bookings, with every JSON response validated against a schema.
 
 Tests run on every push and pull request, nightly at 9:00 UTC, and on demand through GitHub Actions.
@@ -33,7 +33,7 @@ pages/                 Page objects for the Swag Labs UI
   interactions.py      Click and type helpers that confirm each action took effect (see Known issues)
   timing.py            Response-time measurement with the browser's own clock
 tests/ui/              UI tests: login, logout, sorting, product details, cart, checkout, accessibility,
-                       performance, problem_user bugs
+                       performance, problem_user and error_user bugs
   features/            Gherkin feature files, one per area
   conftest.py          Step definitions shared by more than one feature
   test_*.py            Each module runs one feature file and holds its own step definitions
@@ -196,6 +196,18 @@ Swag Labs' `problem_user` test account is built to misbehave. [`problem_user.fea
 | Checkout | Typing a last name overwrites the first name, so checkout fails with "Last Name is required" |
 
 The product-link and "ITEM NOT FOUND" symptoms are one bug: each link points to product ID + 1, and no product has ID 6.
+
+### `error_user` fails on some buttons and fields
+
+Swag Labs' `error_user` account fails in different places from `problem_user`. [`error_user.feature`](tests/ui/features/error_user.feature) describes the correct behavior, with the affected cases tagged `@known-bug`:
+
+| Bug | What `error_user` sees |
+|---|---|
+| Add to cart on a product's details page | Does nothing for the Bolt T-Shirt, Fleece Jacket and Red T-Shirt; works for the other three |
+| Last name at checkout | The field won't take any input, and Continue still moves on with it blank |
+| Finish | Does nothing, so the order is never completed |
+
+The Add to cart scenario runs every product, with the three broken ones in their own `Examples:` table tagged `@known-bug`, so the report shows the bug is limited to those products. The Finish scenario opens the order overview directly, so the last name bug can't stop it before it reaches Finish.
 
 ### `performance_glitch_user` is slow to show products
 

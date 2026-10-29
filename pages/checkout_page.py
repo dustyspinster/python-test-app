@@ -8,6 +8,7 @@ from pages.interactions import click, type_text
 
 class CheckoutPage:
     URL = "https://www.saucedemo.com/checkout-step-one.html"
+    OVERVIEW_URL = "https://www.saucedemo.com/checkout-step-two.html"
 
     FIRST_NAME = (By.ID, "first-name")
     LAST_NAME = (By.ID, "last-name")
@@ -36,6 +37,13 @@ class CheckoutPage:
             self.CONTINUE_BUTTON,
             lambda d: "checkout-step-two" in d.current_url or d.find_elements(*self.ERROR),
         )
+
+    def enter_last_name(self, last: str) -> None:
+        # Raises AssertionError if the field doesn't keep the text, even when set via JavaScript
+        type_text(self.driver, self.LAST_NAME, last)
+
+    def last_name(self) -> str:
+        return self.driver.find_element(*self.LAST_NAME).get_attribute("value")
 
     def finish(self) -> None:
         click(self.driver, self.FINISH_BUTTON, EC.url_contains("checkout-complete"))
