@@ -5,10 +5,35 @@ from typing import Any
 import pytest
 import requests
 
+from tests.api.rate_limiter import RateLimiter
+
 BASE_URL = "https://restful-booker.herokuapp.com"
 JSON_HEADERS = {"Content-Type": "application/json", "Accept": "application/json"}
 
 log = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def rate_limited_requests() -> Iterator[None]:
+    """Keep every request to Restful-booker within 10 per second, with bursts up to 20.
+
+    Each pytest-xdist worker is its own process, so each gets its own limit.
+    """
+    limiter = RateLimiter(rate=10, burst=20)
+    send = requests.Session.request
+
+    def limited(
+        self: requests.Session, method: str, url: str, *args: Any, **kwargs: Any
+    ) -> requests.Response:
+        waited = limiter.acquire()
+        if waited:
+            log.info("Rate limit reached; waited %.2f s before %s %s", waited, method, url)
+        return send(self, method, url, *args, **kwargs)
+
+    # requests.get, requests.post and the rest all send through Session.request
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(requests.Session, "request", limited)
+        yield
 
 
 def get_token() -> str:
