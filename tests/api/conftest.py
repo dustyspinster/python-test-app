@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 import requests
 
+from tests.api.circuit_breaker import CircuitBreaker
 from tests.api.rate_limiter import RateLimiter
 
 BASE_URL = "https://restful-booker.herokuapp.com"
@@ -14,26 +15,51 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session", autouse=True)
-def rate_limited_requests() -> Iterator[None]:
-    """Keep every request to Restful-booker within 10 per second, with bursts up to 20.
+def protected_requests() -> Iterator[None]:
+    """Send every request to Restful-booker through a circuit breaker and a rate limiter.
 
-    Each pytest-xdist worker is its own process, so each gets its own limit.
+    The breaker stops sending for 30 seconds after 3 failures in a row, so tests fail fast
+    while the service is down. The limiter keeps requests within 10 per second, with bursts
+    up to 20. Each pytest-xdist worker is its own process, so each gets its own of both.
     """
+    breaker = CircuitBreaker(threshold=3, cooldown=30)
     limiter = RateLimiter(rate=10, burst=20)
     send = requests.Session.request
 
-    def limited(
+    def protected(
         self: requests.Session, method: str, url: str, *args: Any, **kwargs: Any
     ) -> requests.Response:
-        waited = limiter.acquire()
-        if waited:
-            log.info("Rate limit reached; waited %.2f s before %s %s", waited, method, url)
-        return send(self, method, url, *args, **kwargs)
+        def limited_send() -> requests.Response:
+            waited = limiter.acquire()
+            if waited:
+                log.info("Rate limit reached; waited %.2f s before %s %s", waited, method, url)
+            return send(self, method, url, *args, **kwargs)
+
+        # The breaker goes first, so a request it stops doesn't wait for the limiter
+        return breaker.call(limited_send, f"{method} {url}")
 
     # requests.get, requests.post and the rest all send through Session.request
     with pytest.MonkeyPatch.context() as patch:
-        patch.setattr(requests.Session, "request", limited)
+        patch.setattr(requests.Session, "request", protected)
         yield
+
+
+class FakeClock:
+    """Stands in for time.monotonic and time.sleep, so timing tests run instantly and exactly."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def time(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.now += seconds
+
+
+@pytest.fixture
+def clock() -> FakeClock:
+    return FakeClock()
 
 
 def get_token() -> str:

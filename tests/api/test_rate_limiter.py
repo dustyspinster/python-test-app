@@ -12,21 +12,7 @@ from tests.api.rate_limiter import RateLimiter
 
 scenarios("features/rate_limiter.feature")
 
-
-class FakeClock:
-    def __init__(self) -> None:
-        self.now = 0.0
-
-    def time(self) -> float:
-        return self.now
-
-    def sleep(self, seconds: float) -> None:
-        self.now += seconds
-
-
-@pytest.fixture
-def clock():
-    return FakeClock()
+# The fake clock fixture, clock, is in conftest.py
 
 
 @pytest.fixture

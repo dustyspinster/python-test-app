@@ -7,7 +7,7 @@
 Automated UI and API tests written in Python with pytest, with user-facing behavior described in Gherkin and run by [pytest-bdd](https://pytest-bdd.readthedocs.io/):
 
 - **UI tests** drive [Swag Labs](https://www.saucedemo.com), Sauce Labs' demo store, with Selenium and Chrome: login, logout, product sorting, product details, cart, checkout, accessibility, response times, and the deliberate bugs of Swag Labs' `problem_user` and `error_user` accounts, all written as Gherkin scenarios.
-- **API tests** exercise the [Restful-booker](https://restful-booker.herokuapp.com) API with `requests`: authentication, and creating, reading, searching, updating, partially updating and deleting bookings, with every JSON response validated against a schema. Requests go through a client-side rate limiter.
+- **API tests** exercise the [Restful-booker](https://restful-booker.herokuapp.com) API with `requests`: authentication, and creating, reading, searching, updating, partially updating and deleting bookings, with every JSON response validated against a schema. Requests go through a client-side circuit breaker and rate limiter.
 
 Tests run on every push and pull request, nightly at 9:00 UTC, and on demand through GitHub Actions.
 
@@ -19,6 +19,7 @@ Tests run on every push and pull request, nightly at 9:00 UTC, and on demand thr
 - **API contract checks:** strict [JSON schemas](tests/api/schemas.py) for every response shape, checking required fields, exact types, real dates and no unexpected fields, with offline tests proving the schemas reject bad data.
 - **Reliable tests:** explicit waits instead of sleeps, and every click or keystroke is checked for its effect rather than assumed to work.
 - **Accessibility testing:** every page is scanned with [axe-core](https://github.com/dequelabs/axe-core) against the WCAG 2.0–2.2 Level A and AA rules, the standard behind Section 508. Keyboard access is checked separately, because automated scans miss it: the scan reports Swag Labs clean, yet two WCAG failures were found by checking focus directly (see Known issues).
+- **Circuit breaker:** after 3 failed requests in a row (refused connections, timeouts, or 502, 503 and 504 responses), a [circuit breaker](tests/api/circuit_breaker.py) stops sending requests for 30 seconds, so while Restful-booker is down each API test fails at once instead of waiting out a 15-second timeout. After the cooldown one trial request decides whether it closes or stays open. Errors that mean the service is up, such as 400 or 404, don't count. Its [Gherkin scenarios](tests/api/features/circuit_breaker.feature) force every state with fake responses and a fake clock.
 - **Rate limiting:** every API request passes through a [token-bucket rate limiter](tests/api/rate_limiter.py) (10 requests per second, bursts up to 20) that makes requests wait rather than fail. Its [Gherkin scenarios](tests/api/features/rate_limiter.feature) run against a fake clock, so the timings are exact and the tests take milliseconds.
 - **Performance checks:** response-time scenarios with limits in plain language ("within 3 seconds"), timed with the browser's own clock from when the page receives each action, comparing a normal account with Swag Labs' deliberately slow one.
 - **Parallel execution:** [pytest-xdist](https://pytest-xdist.readthedocs.io/) spreads each suite across one worker per CPU core, each UI worker with its own Chrome. Every test sets up its own browser session and data, so tests can run in any order on any worker. On a 4-core machine the UI suite drops from about 65 seconds to 19.
@@ -42,6 +43,8 @@ tests/api/             API tests for Restful-booker, with their own fixtures
   features/            Gherkin scenarios for the booking lifecycle and its permissions
   test_bookings.py     Plain pytest checks for listing, search, authentication and token retry
   test_validation.py   How the API handles bad input and missing records, including its known bugs
+  circuit_breaker.py   Stops sending API requests for 30 seconds after 3 failures in a row
+  test_circuit_breaker.py  The circuit breaker's scenarios, with fake responses and a fake clock
   rate_limiter.py      Keeps API requests within 10 per second, with bursts up to 20
   test_rate_limiter.py The rate limiter's scenarios, run against a fake clock
   schemas.py           JSON schemas for each response shape, and the validation helper
