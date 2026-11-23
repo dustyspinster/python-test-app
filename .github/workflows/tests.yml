@@ -92,19 +92,10 @@ jobs:
           if-no-files-found: ignore
 
   # Publish the latest reports from main to GitHub Pages, whether the tests passed or failed
-  publish-reports:
+  build-reports:
     needs: [api-tests, ui-tests]
     if: always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    concurrency:
-      group: pages
-      cancel-in-progress: false
     steps:
       - name: Check out code
         uses: actions/checkout@v7
@@ -129,6 +120,34 @@ jobs:
         with:
           path: site
 
+  # Deploying in its own job, after the upload job has finished, gives GitHub
+  # time to list the uploaded artifact. Deploying in the same job as the upload
+  # often fails with 'No artifacts named "github-pages" were found'
+  # (actions/deploy-pages#451).
+  publish-reports:
+    needs: build-reports
+    if: always() && needs.build-reports.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy-retry.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
       - name: Deploy to GitHub Pages
         id: deploy
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+
+      - name: Wait before retrying
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 30
+
+      - name: Deploy to GitHub Pages (retry)
+        id: deploy-retry
+        if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v5
